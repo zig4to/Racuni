@@ -242,10 +242,19 @@
     });
   }
 
+  /* Slovenska ednina/dvojina/množina: 1 račun, 2 računa, 3 računi, 5 računov. */
+  function plural(n) {
+    var r = n % 100;
+    if (r === 1) return n + ' račun';
+    if (r === 2) return n + ' računa';
+    if (r === 3 || r === 4) return n + ' računi';
+    return n + ' računov';
+  }
+
   function updateStorageInfo(items) {
     var total = items.reduce(function (s, r) { return s + (r.size || 0); }, 0);
     el.storageInfo.textContent = items.length
-      ? items.length + ' računov · ' + fmtSize(total)
+      ? plural(items.length) + ' · ' + fmtSize(total)
       : '';
   }
 

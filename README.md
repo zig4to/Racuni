@@ -47,16 +47,21 @@ umetne svetlobe, da je papir res bel in besedilo berljivo.
 **Omejitev:** bel račun na beli/svetli podlagi ni ločljiv od ozadja — takrat aplikacija
 pošteno javi, da ni prepričana, in vogale nastaviš ročno. Zato slikaj na temni podlagi.
 
-## Test
+## Testi
 
 ```bash
-node test/detect.node.test.js      # ali: npm test
+npm test          # oba testa (36 preverb, brez zunanjih odvisnosti)
 ```
 
-Test sintetizira fotografije z znanimi vogali (raven, zavrten, perspektiva, senca,
-majhen račun, ležeč račun, bela podlaga, prazna slika, izrojeni vogali) in preveri,
-da je napaka vogalov pod 3 % diagonale ter da je izrez svetel. Trenutno **9/9**.
-Datoteka `test/test.html` požene isto v brskalniku in pokaže slike.
+**`test/detect.node.test.js` — zaznava (9/9).** Sintetizira fotografije z znanimi vogali
+(raven, zavrten, perspektiva, senca, majhen račun, ležeč račun, bela podlaga, prazna slika,
+izrojeni vogali) in preveri, da je napaka vogalov pod 3 % diagonale in da je izrez svetel.
+
+**`test/app.node.test.js` — vmesnik (27/27).** Posnema DOM, kamero, IndexedDB in Blob ter
+požene pravi `js/app.js` skozi celoten potek: zajem → zaznava → vlečenje vogala → obrez →
+shranjevanje → galerija → pregled → prenos → izbris, vključno s preklicem in vrtenjem.
+
+`test/test.html` požene zaznavo v brskalniku in poleg številk pokaže tudi slike.
 
 ## Struktura
 
