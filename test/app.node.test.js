@@ -196,7 +196,28 @@ function quadPoints() {
 }
 
 (async function run() {
-  console.log('--- vezava vmesnika ---');
+  console.log('--- CSS: skrito mora biti skrito ---');
+  /* Element z atributom hidden postane spet viden, če ga razredno pravilo v CSS
+     postavi na display:flex/grid/... Tak spodrsljaj je pokazal prekrivalo
+     "Obdelujem…" takoj ob odprtju strani. */
+  var css = fs.readFileSync(path.join(ROOT, 'style.css'), 'utf8');
+  var hiddenTags = html.match(/<[^>]*\shidden\s*>/g) || [];
+  var guard = /\[hidden\]\s*\{[^}]*display\s*:\s*none\s*!important/.test(css);
+  var risky = [];
+  hiddenTags.forEach(function (tag) {
+    var classes = (tag.match(/class="([^"]+)"/) || ['', ''])[1].split(/\s+/).filter(Boolean);
+    var idm = (tag.match(/id="([^"]+)"/) || [])[1];
+    classes.forEach(function (c) {
+      var rule = new RegExp('\\.' + c + '\\s*\\{[^}]*display\\s*:\\s*(?!none)', 'g');
+      if (rule.test(css)) risky.push((idm || '') + ' (.' + c + ')');
+    });
+  });
+  check('CSS vsili display:none za [hidden]', guard);
+  check('noben skrit element ne uhaja iz razrednih pravil', guard || risky.length === 0,
+        guard ? '(' + hiddenTags.length + ' skritih elementov, ' + risky.length + ' bi jih brez pravila ušlo)'
+              : 'ušli bi: ' + risky.join(', '));
+
+  console.log('\n--- vezava vmesnika ---');
   await tick(20);
   check('vsi ID-ji iz app.js obstajajo v index.html', Object.keys(el).length === 27,
         '(' + Object.keys(el).length + '/27)');

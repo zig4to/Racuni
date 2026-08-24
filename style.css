@@ -5,6 +5,9 @@
 }
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
+/* Razredna pravila (.busy, .viewer, .btn) nastavljajo display in bi sicer
+   premagala privzeti [hidden] brskalnika — skrito mora ostati skrito. */
+[hidden]{display:none !important}
 body{
   background:var(--bg); color:var(--text);
   font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
