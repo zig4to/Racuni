@@ -1,0 +1,14 @@
+{
+  "name": "Računi — slikaj in obreži",
+  "short_name": "Računi",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "background_color": "#12151b",
+  "theme_color": "#12151b",
+  "orientation": "portrait",
+  "lang": "sl",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}

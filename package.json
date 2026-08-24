@@ -1,0 +1,10 @@
+{
+  "name": "racuni",
+  "version": "1.0.0",
+  "description": "Slikaj račun, aplikacija izreže bel list in ga shrani kot JPG.",
+  "private": true,
+  "scripts": {
+    "start": "node serve.js",
+    "test": "node test/detect.node.test.js"
+  }
+}

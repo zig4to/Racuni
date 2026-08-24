@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="sl">
+<head>
+<meta charset="utf-8">
+<title>Test zaznave računa</title>
+<style>
+  body{font:14px system-ui;background:#12151b;color:#e8ecf3;padding:16px}
+  .case{margin-bottom:20px;border-bottom:1px solid #2c3442;padding-bottom:16px}
+  canvas{border:1px solid #333;vertical-align:top;max-height:220px}
+  .pass{color:#4ade80;font-weight:700}
+  .fail{color:#f87171;font-weight:700}
+</style>
+</head>
+<body>
+<h1>Test zaznave in izreza</h1>
+<div id="out"></div>
+
+<script src="../js/detect.js"></script>
+<script>
+/* Sintetizira "fotografijo" računa: temna podlaga + bel list z besedilom,
+   postavljen po zadanem štirikotniku (perspektiva se približa po vrsticah). */
+function receiptTexture(w, h) {
+  var c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  var x = c.getContext('2d');
+  x.fillStyle = '#f7f5f1'; x.fillRect(0, 0, w, h);
+  x.fillStyle = '#1a1a1a';
+  x.font = 'bold ' + Math.round(h * 0.035) + 'px monospace';
+  x.textAlign = 'center';
+  x.fillText('MERCATOR D.D.', w / 2, h * 0.08);
+  x.font = Math.round(h * 0.026) + 'px monospace';
+  for (var i = 0; i < 22; i++) {
+    var y = h * 0.16 + i * h * 0.033;
+    x.textAlign = 'left';
+    x.fillText('Artikel ' + (i + 1), w * 0.08, y);
+    x.textAlign = 'right';
+    x.fillText((Math.random() * 9 + 1).toFixed(2), w * 0.92, y);
+  }
+  x.fillRect(w * 0.08, h * 0.90, w * 0.84, 3);
+  return c;
+}
+
+function scene(opts) {
+  var W = opts.W, H = opts.H;
+  var c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  var x = c.getContext('2d');
+
+  // podlaga
+  x.fillStyle = opts.bg; x.fillRect(0, 0, W, H);
+  for (var i = 0; i < 900; i++) {           // tekstura/šum podlage
+    x.fillStyle = 'rgba(0,0,0,' + (Math.random() * 0.25) + ')';
+    x.fillRect(Math.random() * W, Math.random() * H, 6, 3);
+  }
+
+  var q = opts.quad;                         // TL, TR, BR, BL
+  var tex = receiptTexture(300, 900);
+
+  // list po vrsticah (približek perspektive)
+  var steps = 900;
+  for (var s = 0; s < steps; s++) {
+    var t = s / steps;
+    var lx = q[0][0] + (q[3][0] - q[0][0]) * t, ly = q[0][1] + (q[3][1] - q[0][1]) * t;
+    var rx = q[1][0] + (q[2][0] - q[1][0]) * t, ry = q[1][1] + (q[2][1] - q[1][1]) * t;
+    x.save();
+    x.translate(lx, ly);
+    x.rotate(Math.atan2(ry - ly, rx - lx));
+    x.drawImage(tex, 0, Math.floor(t * 900), 300, 2, 0, 0, Math.hypot(rx - lx, ry - ly), 3);
+    x.restore();
+  }
+
+  if (opts.shade) {                          // neenakomerna osvetlitev
+    var g = x.createLinearGradient(0, 0, W, H);
+    g.addColorStop(0, 'rgba(0,0,0,0)');
+    g.addColorStop(1, 'rgba(0,0,0,' + opts.shade + ')');
+    x.fillStyle = g; x.fillRect(0, 0, W, H);
+  }
+  return c;
+}
+
+var cases = [
+  { name: 'Naravnost, temna miza', W: 900, H: 1200, bg: '#3a3128',
+    quad: [[250, 120], [640, 120], [640, 1080], [250, 1080]] },
+  { name: 'Zavrten ~10°', W: 900, H: 1200, bg: '#2b2b30',
+    quad: [[300, 130], [670, 200], [520, 1090], [150, 1020]] },
+  { name: 'Perspektiva (od zgoraj)', W: 900, H: 1200, bg: '#4a3a2a',
+    quad: [[330, 110], [600, 130], [720, 1060], [180, 1050]] },
+  { name: 'Slaba svetloba + senca', W: 900, H: 1200, bg: '#20242c', shade: 0.55,
+    quad: [[280, 150], [640, 140], [660, 1050], [260, 1060]] },
+  { name: 'Majhen račun v kotu', W: 900, H: 1200, bg: '#332c26',
+    quad: [[420, 300], [700, 320], [690, 900], [400, 880]] }
+];
+
+var out = document.getElementById('out');
+var results = [];
+
+cases.forEach(function (cs) {
+  var img = scene(cs);
+  var t0 = performance.now();
+  var det = Detect.findCorners(img);
+  var t1 = performance.now();
+
+  // napaka: povprečna razdalja vogalov glede na diagonalo slike
+  var diag = Math.hypot(cs.W, cs.H);
+  var err = 0;
+  for (var i = 0; i < 4; i++) {
+    err += Math.hypot(det.corners[i][0] - cs.quad[i][0], det.corners[i][1] - cs.quad[i][1]) / 4;
+  }
+  var relErr = err / diag;
+
+  var cropped = Detect.crop(img, det.corners, { enhance: true });
+  var t2 = performance.now();
+
+  // povprečna svetlost izreza (bel list mora biti svetel)
+  var cd = cropped.getContext('2d').getImageData(0, 0, cropped.width, cropped.height).data;
+  var sum = 0, n = cropped.width * cropped.height;
+  for (var p = 0; p < n; p += 7) sum += cd[p * 4];
+  var meanLuma = sum / Math.ceil(n / 7);
+
+  var ok = det.auto && relErr < 0.03 && meanLuma > 150;
+  results.push({ name: cs.name, ok: ok, relErr: relErr, meanLuma: meanLuma });
+
+  var div = document.createElement('div');
+  div.className = 'case';
+  div.innerHTML = '<h3>' + cs.name + ' — <span class="' + (ok ? 'pass' : 'fail') + '">' +
+    (ok ? 'PASS' : 'FAIL') + '</span></h3>' +
+    '<p>auto=' + det.auto + ' · napaka vogalov=' + (relErr * 100).toFixed(2) + '% diagonale' +
+    ' · svetlost izreza=' + meanLuma.toFixed(0) +
+    ' · zaznava=' + (t1 - t0).toFixed(0) + 'ms · izrez=' + (t2 - t1).toFixed(0) + 'ms' +
+    ' · izhod=' + cropped.width + '×' + cropped.height + '</p>';
+  img.style.maxHeight = '220px';
+  div.appendChild(img);
+  div.appendChild(cropped);
+  out.appendChild(div);
+});
+
+var passed = results.filter(function (r) { return r.ok; }).length;
+var summary = document.createElement('h2');
+summary.id = 'summary';
+summary.textContent = 'SKUPAJ: ' + passed + '/' + results.length + ' uspešnih';
+summary.className = passed === results.length ? 'pass' : 'fail';
+out.parentNode.insertBefore(summary, out);
+window.__results = results;
+console.log('TEST_SUMMARY ' + passed + '/' + results.length, JSON.stringify(results));
+</script>
+</body>
+</html>
