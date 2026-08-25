@@ -1,9 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192">
-  <rect width="192" height="192" rx="40" fill="#12151b"/>
-  <path d="M56 34h80v112l-13-9-13 9-14-9-13 9-14-9-13 9z" fill="#f3f5f8"/>
-  <g stroke="#12151b" stroke-width="7" stroke-linecap="round">
-    <path d="M72 60h48M72 80h48M72 100h30"/>
-  </g>
-  <circle cx="140" cy="140" r="30" fill="#4ade80"/>
-  <path d="M128 140l9 9 18-18" stroke="#06281a" stroke-width="8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+  <defs>
+    <linearGradient id="g" x1="14.7%" y1="6.4%" x2="85.3%" y2="93.6%">
+      <stop offset="0%" stop-color="#f59e0b"/>
+      <stop offset="100%" stop-color="#fb7185"/>
+    </linearGradient>
+  </defs>
+  <rect width="24" height="24" rx="7" fill="url(#g)"/>
+  <path d="M6 2.5h12v19l-2.5-1.6L13 21.5l-2.5-1.6L8 21.5l-2-1.6Z" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M9.5 8h5M9.5 12h5M9.5 16h3" fill="none" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/>
 </svg>
