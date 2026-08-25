@@ -5,8 +5,10 @@
   "private": true,
   "scripts": {
     "start": "node serve.js",
-    "test": "node test/detect.node.test.js && node test/app.node.test.js",
+    "icons": "node tools/make-icons.js",
+    "test": "node test/detect.node.test.js && node test/app.node.test.js && node test/pwa.node.test.js",
     "test:detect": "node test/detect.node.test.js",
-    "test:app": "node test/app.node.test.js"
+    "test:app": "node test/app.node.test.js",
+    "test:pwa": "node test/pwa.node.test.js"
   }
 }

@@ -11,7 +11,7 @@
   ['inputCamera', 'inputPicker', 'viewGallery', 'viewEdit', 'grid', 'emptyState',
    'preview', 'overlay', 'shade', 'quad', 'stage', 'hint', 'enhance', 'btnRotate',
    'btnReset', 'btnCancel', 'btnCrop', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
-   'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo'
+   'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnInstall'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -342,6 +342,41 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !el.viewer.hidden) closeViewer();
   });
+
+
+  // ----------------------------------------------------- namestitev v Chrome
+  /* Chrome sproži dogodek beforeinstallprompt, ko so izpolnjeni pogoji za
+     namestitev (varen izvor, manifest, ikoni 192/512 px, service worker).
+     Poziv prestrežemo, da ga lahko ponudimo v svojem gumbu v glavi. */
+  var installEvent = null;
+
+  function isInstalled() {
+    try {
+      if (window.matchMedia &&
+          (window.matchMedia('(display-mode: standalone)').matches ||
+           window.matchMedia('(display-mode: window-controls-overlay)').matches)) return true;
+    } catch (err) { /* stara okolja brez matchMedia */ }
+    return navigator.standalone === true;   // iOS Safari
+  }
+
+  el.btnInstall.addEventListener('click', function () {
+    var ev = installEvent;
+    installEvent = null;                    // poziv je enkraten
+    el.btnInstall.hidden = true;
+    if (ev) ev.prompt();
+  });
+
+  if (typeof window.addEventListener === 'function') {
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      installEvent = e;
+      el.btnInstall.hidden = isInstalled();
+    });
+    window.addEventListener('appinstalled', function () {
+      installEvent = null;
+      el.btnInstall.hidden = true;
+    });
+  }
 
   renderGallery();
 

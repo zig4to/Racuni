@@ -14,6 +14,9 @@ V konzoli se izpišeta naslova. `http://localhost:8080` odpri na računalniku,
 naslov oblike `http://192.168.x.x:8080` pa **na telefonu** (isto WiFi omrežje) —
 tam deluje gumb »Slikaj račun«, ki odpre kamero.
 
+> Prek naslova IP se aplikacija ne da **namestiti** in ne deluje brez povezave:
+> Chrome oboje omogoči le na `https://` ali `localhost`. Glej *Namestitev kot aplikacija*.
+
 > Odpiranje `index.html` z dvoklikom (`file://`) odsvetujem: brskalniki v tem načinu
 > omejijo IndexedDB, zato se računi ne shranijo.
 
@@ -50,16 +53,22 @@ pošteno javi, da ni prepričana, in vogale nastaviš ročno. Zato slikaj na tem
 ## Testi
 
 ```bash
-npm test          # oba testa (36 preverb, brez zunanjih odvisnosti)
+npm test          # vsi trije testi (68 preverb, brez zunanjih odvisnosti)
 ```
 
 **`test/detect.node.test.js` — zaznava (9/9).** Sintetizira fotografije z znanimi vogali
 (raven, zavrten, perspektiva, senca, majhen račun, ležeč račun, bela podlaga, prazna slika,
 izrojeni vogali) in preveri, da je napaka vogalov pod 3 % diagonale in da je izrez svetel.
 
-**`test/app.node.test.js` — vmesnik (27/27).** Posnema DOM, kamero, IndexedDB in Blob ter
+**`test/app.node.test.js` — vmesnik (35/35).** Posnema DOM, kamero, IndexedDB in Blob ter
 požene pravi `js/app.js` skozi celoten potek: zajem → zaznava → vlečenje vogala → obrez →
-shranjevanje → galerija → pregled → prenos → izbris, vključno s preklicem in vrtenjem.
+shranjevanje → galerija → pregled → prenos → izbris, vključno s preklicem, vrtenjem in
+pozivom za namestitev.
+
+**`test/pwa.node.test.js` — namestljivost (24/24).** Preveri pogoje, ki jih Chrome zahteva
+za namestitev: polja v manifestu, obstoj ikon in ujemanje njihovih **dejanskih** velikosti
+(iz glave PNG) z navedenimi, povezavo na manifest, registracijo service workerja in to,
+da so vse predpomnjene datoteke res v repozitoriju.
 
 `test/test.html` požene zaznavo v brskalniku in poleg številk pokaže tudi slike.
 
@@ -71,25 +80,62 @@ shranjevanje → galerija → pregled → prenos → izbris, vključno s preklic
 | `js/detect.js` | zaznava lista in perspektivni izrez |
 | `js/db.js` | shramba v IndexedDB |
 | `js/app.js` | povezava vmesnika, galerija, prenos/deljenje |
-| `sw.js`, `manifest.json`, `icon.svg` | PWA — namestitev na telefon, delovanje brez povezave |
+| `sw.js`, `manifest.json`, `icon.svg`, `icons/` | PWA — namestitev v Chrome, delovanje brez povezave |
+| `tools/make-icons.js` | zgenerira ikone PNG iz risbe (brez odvisnosti) |
 | `serve.js` | lokalni strežnik za razvoj in preizkus |
 
-## Namestitev na telefon
+## Namestitev kot aplikacija
 
-Odpri stran v Chromu na telefonu → meni → *Dodaj na začetni zaslon*. Aplikacija se
-zažene čez cel zaslon in deluje tudi brez povezave.
+Aplikacija je PWA, zato jo Chrome namesti kot pravo namizno/telefonsko aplikacijo:
+svoja ikona, svoje okno brez naslovne vrstice, deluje tudi brez povezave.
 
-## Objava na splet (GitHub Pages)
+V glavi strani se pokaže gumb **⬇ Namesti**, brž ko Chrome ugotovi, da je namestitev
+mogoča. Enako ponudi tudi sam — ikona v naslovni vrstici oz. meni ⋮ → *Namesti Računi*.
+
+**Chrome ponudi namestitev samo na varnem izvoru** (`https://` ali `localhost`).
+To je edini pogoj, ki ga ni v tem repozitoriju:
+
+| Kje odpreš | Namestitev |
+|---|---|
+| `http://localhost:8080` (`npm start`) | ✅ deluje |
+| `https://...` (npr. GitHub Pages) | ✅ deluje |
+| `http://192.168.x.x:8080` prek WiFi | ❌ ni varen izvor — glej spodaj |
+| `file://index.html` | ❌ ne deluje (tudi shramba ne) |
+
+### Na telefon
+
+Telefon do domačega računalnika dostopa prek naslova IP, ta pa ni varen izvor —
+zato Chrome tam namestitve **ne** ponudi. Dve poti, ki delujeta:
+
+**1. Objava na GitHub Pages (priporočeno)** — dobiš stalen naslov `https://`, ki ga
+odpreš na katerem koli telefonu:
 
 ```bash
-git init && git add . && git commit -m "Racuni"
-git branch -M main
-git remote add origin git@github.com:<uporabnik>/racuni.git
-git push -u origin main
+git add . && git commit -m "PWA: namestitev v Chrome"
+git push
 ```
 
-Nato v repozitoriju: *Settings → Pages → Deploy from branch → main / (root)*.
-Stran je čez minuto na `https://<uporabnik>.github.io/racuni/`.
+Nato v repozitoriju na GitHubu: *Settings → Pages → Source: Deploy from a branch →
+`main` / `(root)`*. Čez minuto je stran na `https://zig4to.github.io/Racuni/`.
+Odpri jo v Chromu na telefonu → **⬇ Namesti** (ali meni ⋮ → *Namesti aplikacijo*).
+
+> Vse poti v aplikaciji so relativne, zato deluje tudi v podmapi, kakršno da GitHub Pages.
+
+**2. Preizkus prek kabla USB** — brez objave, za razvoj: telefon priklopi z USB
+(vklopljeno *USB debugging*), na računalniku odpri `chrome://inspect/#devices` →
+*Port forwarding* → `8080` → `localhost:8080`. Na telefonu odpri `http://localhost:8080` —
+to velja za varen izvor in namestitev deluje.
+
+Na iPhonu namestitve ne ponuja Chrome, ampak **Safari** → *Deli* → *Dodaj na začetni zaslon*.
+
+### Ikone
+
+`icons/*.png` so zgenerirane iz iste risbe kot `icon.svg` (Chrome za namestitev zahteva
+rastrski ikoni 192 in 512 px). Ob spremembi risbe:
+
+```bash
+npm run icons
+```
 
 ## Kje so shranjeni računi
 

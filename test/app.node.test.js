@@ -94,6 +94,20 @@ global.window = global;                       // da so DB/Detect vidni kot globa
 // navigator in location v Nodu obstajata samo za branje — povozimo ju
 Object.defineProperty(global, 'navigator', { value: {}, configurable: true, writable: true });
 Object.defineProperty(global, 'location', { value: { protocol: 'file:' }, configurable: true, writable: true });
+/* window prejema dogodke o namestitvi — Node globalu manjka addEventListener */
+var winListeners = {};
+global.addEventListener = function (t, fn) { (winListeners[t] = winListeners[t] || []).push(fn); };
+global.removeEventListener = function (t, fn) {
+  if (winListeners[t]) winListeners[t] = winListeners[t].filter(function (f) { return f !== fn; });
+};
+function dispatchWindow(t, ev) {
+  ev = ev || {};
+  ev.type = t;
+  ev.preventDefault = ev.preventDefault || function () { ev.defaultPrevented = true; };
+  (winListeners[t] || []).slice().forEach(function (fn) { fn(ev); });
+  return ev;
+}
+global.matchMedia = function () { return { matches: false, addListener: function () {}, removeListener: function () {} }; };
 global.alert = function (m) { fails.push('alert: ' + m); console.log('FAIL  nepričakovan alert: ' + m); };
 global.confirm = function () { return true; };
 global.scrollTo = function () {};
@@ -229,8 +243,8 @@ function quadPoints() {
 
   console.log('\n--- vezava vmesnika ---');
   await tick(20);
-  check('vsi ID-ji iz app.js obstajajo v index.html', Object.keys(el).length === 27,
-        '(' + Object.keys(el).length + '/27)');
+  check('vsi ID-ji iz app.js obstajajo v index.html', Object.keys(el).length === 28,
+        '(' + Object.keys(el).length + '/28)');
   check('gumbi imajo pripete poslušalce',
         el.btnCrop.hasListener('click') && el.btnCancel.hasListener('click') &&
         el.btnRotate.hasListener('click') && el.btnDelete.hasListener('click') &&
@@ -325,6 +339,18 @@ function quadPoints() {
   el.btnCancel.dispatch('click');
   check('preklic vrne v galerijo brez shranjevanja',
         el.viewGallery.hidden === false && records().length === 0);
+
+  console.log('\n--- namestitev (PWA) ---');
+  var prompted = 0;
+  var bip = dispatchWindow('beforeinstallprompt', { prompt: function () { prompted++; } });
+  check('poziv za namestitev je prestrežen', bip.defaultPrevented === true);
+  check('gumb Namesti se pokaže', el.btnInstall.hidden === false);
+  el.btnInstall.dispatch('click');
+  check('klik sproži brskalnikov poziv', prompted === 1 && el.btnInstall.hidden === true);
+  el.btnInstall.dispatch('click');
+  check('poziva ni mogoče sprožiti dvakrat', prompted === 1);
+  dispatchWindow('appinstalled');
+  check('po namestitvi gumb ostane skrit', el.btnInstall.hidden === true);
 
   console.log('\nSKUPAJ: ' + passes + '/' + (passes + fails.length));
   if (fails.length) console.log('NEUSPELI: ' + fails.join('; '));
