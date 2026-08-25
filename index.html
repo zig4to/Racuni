@@ -14,7 +14,10 @@
 <body>
 
 <header class="topbar">
-  <h1>🧾 Računi</h1>
+  <div class="brand">
+    <span class="brand-mark">🧾</span>
+    <h1>Računi</h1>
+  </div>
   <span id="storageInfo" class="muted"></span>
 </header>
 
@@ -32,8 +35,13 @@
       </label>
     </div>
 
+    <hr class="divider">
+
+    <h2 class="section-title">Shranjeni računi</h2>
+
     <p id="emptyState" class="empty" hidden>
-      Ni še shranjenih računov.<br>
+      <span class="empty-mark">🧾</span>
+      Ni še shranjenih računov.
       <span class="muted">Slikaj račun na temni podlagi (miza, tla) — bel list bo samodejno izrezan.</span>
     </p>
 

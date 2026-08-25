@@ -24,6 +24,16 @@ function check(name, cond, extra) {
 }
 function tick(ms) { return new Promise(function (r) { setTimeout(r, ms || 0); }); }
 
+/* Čakanje na pogoj namesto fiksnega spanja — obdelava slike traja različno dolgo. */
+async function waitFor(cond, ms) {
+  var limit = ms || 3000, t0 = Date.now();
+  while (Date.now() - t0 < limit) {
+    if (cond()) return true;
+    await tick(10);
+  }
+  return false;
+}
+
 // ------------------------------------------------------------------ DOM stub
 function makeEl(tag, id) {
   var listeners = {};
@@ -230,7 +240,7 @@ function quadPoints() {
   console.log('\n--- zajem fotografije ---');
   el.inputCamera.files = [{ name: 'IMG_1.jpg', type: 'image/jpeg' }];
   el.inputCamera.dispatch('change', { target: el.inputCamera });
-  await tick(120);
+  await waitFor(function () { return el.viewEdit.hidden === false && el.busy.hidden === true; });
 
   check('po zajemu se odpre urejanje', el.viewEdit.hidden === false && el.viewGallery.hidden === true);
   check('vrtavka se je skrila', el.busy.hidden === true);
@@ -270,7 +280,8 @@ function quadPoints() {
   console.log('\n--- obrez in shranjevanje ---');
   el.enhance.checked = true;
   el.btnCrop.dispatch('click');
-  await tick(150);
+  var saved = await waitFor(function () { return records().length === 1 && el.viewGallery.hidden === false; });
+  check('shranjevanje se konča brez blokade', saved);
 
   var ids = records();
   var rec = (stores['racuni-db'].slike || {})[ids[0]];
@@ -278,7 +289,8 @@ function quadPoints() {
         rec ? rec.w + 'x' + rec.h + ', ' + rec.size + 'B' : '');
   check('shranjena sta slika in sličica', !!(rec && rec.blob && rec.thumb && rec.thumb._w <= 320));
   check('vrnitev v galerijo', el.viewGallery.hidden === false && el.viewEdit.hidden === true);
-  check('galerija prikaže eno kartico', el.grid.children.length === 1);
+  var drawn = await waitFor(function () { return el.grid.children.length === 1; });
+  check('galerija prikaže eno kartico', drawn);
   check('poziv o prazni galeriji skrit', el.emptyState.hidden === true);
   check('števec v glavi je slovnično pravilen', /^1 račun · /.test(el.storageInfo.textContent),
         '"' + el.storageInfo.textContent + '"');
@@ -297,15 +309,16 @@ function quadPoints() {
         downloads.length ? downloads[0].name : '');
 
   el.btnDelete.dispatch('click');
-  await tick(60);
+  await waitFor(function () { return records().length === 0; });
+  var cleared = await waitFor(function () { return el.grid.children.length === 0; });
   check('izbris odstrani zapis in kartico',
-        records().length === 0 && el.grid.children.length === 0 && el.viewer.hidden === true);
+        cleared && records().length === 0 && el.viewer.hidden === true);
   check('poziv o prazni galeriji spet viden', el.emptyState.hidden === false);
 
   console.log('\n--- preklic in vrtenje ---');
   el.inputPicker.files = [{ name: 'IMG_2.jpg', type: 'image/jpeg' }];
   el.inputPicker.dispatch('change', { target: el.inputPicker });
-  await tick(120);
+  await waitFor(function () { return el.viewEdit.hidden === false && el.busy.hidden === true; });
   el.btnRotate.dispatch('click');
   await tick(20);
   check('vrtenje ne sesuje zaznave', quadPoints().length === 4 && el.busy.hidden === true);
