@@ -85,11 +85,12 @@ var html = read('index.html');
 check('index.html se sklicuje na manifest', /<link[^>]+rel="manifest"[^>]+href="manifest\.json"/.test(html));
 check('index.html ima meta theme-color', /<meta[^>]+name="theme-color"/.test(html));
 check('index.html ima apple-touch-icon', /rel="apple-touch-icon"/.test(html));
-check('index.html ima gumb za namestitev', /id="btnInstall"/.test(html));
 
 var app = read('js/app.js');
 check('app.js registrira service worker', /navigator\.serviceWorker\.register\(/.test(app));
-check('app.js prestreza beforeinstallprompt', /beforeinstallprompt/.test(app));
+/* Ni lastnega gumba za namestitev — app.js ne sme preventDefault-ati
+   beforeinstallprompt, sicer bi to bila edina stvar, ki namestitev prepreči. */
+check('app.js ne prestreza beforeinstallprompt', !/beforeinstallprompt/.test(app));
 
 check('sw.js obstaja', exists('sw.js'));
 var sw = read('sw.js');

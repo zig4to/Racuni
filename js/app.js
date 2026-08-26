@@ -11,10 +11,11 @@
   ['inputCamera', 'inputPicker', 'viewGallery', 'viewEdit', 'grid', 'emptyState',
    'preview', 'overlay', 'shade', 'quad', 'stage', 'hint', 'enhance', 'btnRotate',
    'btnReset', 'btnCancel', 'btnCrop', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
-   'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnInstall',
+   'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnRefresh',
    'formNew', 'fTrgovina', 'fIzdelek', 'fZnamka', 'fModel', 'fDatum', 'fGarancija', 'btnFormNext',
    'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
-   'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty'
+   'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty',
+   'saveMetaStatus'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -430,6 +431,20 @@
 
   /* Podatke se da vpisati ali popraviti tudi pozneje — racune, ki so bili
      shranjeni, preden so ta polja obstajala, se tako dopolni za nazaj. */
+  var saveStatusTimer = null;
+
+  /* Kratka potrditev "Shranjeno" ob gumbu — brez nje ni jasno, ali je klik
+     na "Shrani podatke" sploh kaj naredil. */
+  function showSaveConfirmation() {
+    clearTimeout(saveStatusTimer);
+    el.saveMetaStatus.hidden = false;
+    el.saveMetaStatus.classList.remove('fade');
+    saveStatusTimer = setTimeout(function () {
+      el.saveMetaStatus.classList.add('fade');
+      saveStatusTimer = setTimeout(function () { el.saveMetaStatus.hidden = true; }, 400);
+    }, 2200);
+  }
+
   function saveMeta() {
     if (!state.current) return;
     var rec = state.current, f = readFields(viewFields);
@@ -444,6 +459,7 @@
     el.btnSaveMeta.disabled = true;
     DB.add(rec).then(function () {
       renderWarranty(rec);
+      showSaveConfirmation();
       if (window.Sync) Sync.afterSave();
       return renderGallery();
     }).then(function () {
@@ -555,39 +571,27 @@
   });
 
 
-  // ----------------------------------------------------- namestitev v Chrome
-  /* Chrome sproži dogodek beforeinstallprompt, ko so izpolnjeni pogoji za
-     namestitev (varen izvor, manifest, ikoni 192/512 px, service worker).
-     Poziv prestrežemo, da ga lahko ponudimo v svojem gumbu v glavi. */
-  var installEvent = null;
-
-  function isInstalled() {
-    try {
-      if (window.matchMedia &&
-          (window.matchMedia('(display-mode: standalone)').matches ||
-           window.matchMedia('(display-mode: window-controls-overlay)').matches)) return true;
-    } catch (err) { /* stara okolja brez matchMedia */ }
-    return navigator.standalone === true;   // iOS Safari
+  // ------------------------------------------------------------- trdo osvežimo
+  /* Navadni location.reload() bi še vedno stregel service worker iz predpomnilnika
+     (fetch v sw.js je cache-first) — zato pred ponovnim nalaganjem odjavimo
+     service worker in pobrišemo vse predpomnilnike, enako kot Ctrl+F5. */
+  function hardRefresh() {
+    el.btnRefresh.disabled = true;
+    var tasks = [];
+    if ('serviceWorker' in navigator) {
+      tasks.push(navigator.serviceWorker.getRegistrations().then(function (regs) {
+        return Promise.all(regs.map(function (r) { return r.unregister(); }));
+      }));
+    }
+    if (window.caches) {
+      tasks.push(caches.keys().then(function (keys) {
+        return Promise.all(keys.map(function (k) { return caches.delete(k); }));
+      }));
+    }
+    Promise.all(tasks).catch(function () { /* nič od tega ni nujno */ })
+      .then(function () { location.reload(); });
   }
-
-  el.btnInstall.addEventListener('click', function () {
-    var ev = installEvent;
-    installEvent = null;                    // poziv je enkraten
-    el.btnInstall.hidden = true;
-    if (ev) ev.prompt();
-  });
-
-  if (typeof window.addEventListener === 'function') {
-    window.addEventListener('beforeinstallprompt', function (e) {
-      e.preventDefault();
-      installEvent = e;
-      el.btnInstall.hidden = isInstalled();
-    });
-    window.addEventListener('appinstalled', function () {
-      installEvent = null;
-      el.btnInstall.hidden = true;
-    });
-  }
+  el.btnRefresh.addEventListener('click', hardRefresh);
 
   /* Majhna povrsina za js/sync.js, da po prenosu iz oblaka osvezi galerijo. */
   window.App = { refreshGallery: renderGallery };

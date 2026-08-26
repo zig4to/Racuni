@@ -30,7 +30,6 @@
     <h1>Računi</h1>
   </div>
   <div class="topbar-right">
-    <button id="btnInstall" class="btn btn-sm btn-install" hidden>⬇ Namesti</button>
     <button id="btnCloud" class="btn btn-sm" hidden>
       <svg class="btn-icon" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
         <circle cx="12" cy="8" r="3.4" fill="none" stroke="currentColor" stroke-width="1.8"/>
@@ -160,6 +159,7 @@
 
 <footer class="footer">
   <span id="storageInfo" class="muted"></span>
+  <button id="btnRefresh" class="btn btn-sm" type="button">↻ Osveži</button>
 </footer>
 
 <!-- ================= PREGLED SHRANJENEGA ================= -->
@@ -200,7 +200,15 @@
         <input id="vGarancija" type="number" min="0" step="1" inputmode="numeric" placeholder="npr. 2">
       </div>
     </div>
-    <button id="btnSaveMeta" class="btn btn-sm">💾 Shrani podatke</button>
+    <div class="save-row">
+      <button id="btnSaveMeta" class="btn btn-sm">💾 Shrani podatke</button>
+      <span id="saveMetaStatus" class="save-status" hidden>
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+          <path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Shranjeno
+      </span>
+    </div>
   </div>
 
   <div class="viewer-actions">

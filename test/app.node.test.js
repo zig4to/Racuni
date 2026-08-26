@@ -246,8 +246,8 @@ function quadPoints() {
   /* Nadomestek getElementById zabeleži samo ID-je, ki v index.html res
      obstajajo, zato je to število hkrati preverba, da se vsi razrešijo.
      Ob dodajanju elementa v app.js je treba popraviti tudi to pričakovanje. */
-  check('vsi ID-ji iz app.js obstajajo v index.html', Object.keys(el).length === 50,
-        '(' + Object.keys(el).length + '/50)');
+  check('vsi ID-ji iz app.js obstajajo v index.html', Object.keys(el).length === 51,
+        '(' + Object.keys(el).length + '/51)');
   check('gumbi imajo pripete poslušalce',
         el.btnCrop.hasListener('click') && el.btnCancel.hasListener('click') &&
         el.btnRotate.hasListener('click') && el.btnDelete.hasListener('click') &&
@@ -344,16 +344,29 @@ function quadPoints() {
         el.viewGallery.hidden === false && records().length === 0);
 
   console.log('\n--- namestitev (PWA) ---');
-  var prompted = 0;
-  var bip = dispatchWindow('beforeinstallprompt', { prompt: function () { prompted++; } });
-  check('poziv za namestitev je prestrežen', bip.defaultPrevented === true);
-  check('gumb Namesti se pokaže', el.btnInstall.hidden === false);
-  el.btnInstall.dispatch('click');
-  check('klik sproži brskalnikov poziv', prompted === 1 && el.btnInstall.hidden === true);
-  el.btnInstall.dispatch('click');
-  check('poziva ni mogoče sprožiti dvakrat', prompted === 1);
-  dispatchWindow('appinstalled');
-  check('po namestitvi gumb ostane skrit', el.btnInstall.hidden === true);
+  /* Ni več lastnega gumba za namestitev — app.js ne sme prestreci
+     beforeinstallprompt, da Chrome sam ponudi svojo namestitev
+     (ikona v naslovni vrstici oz. meni ⋮). */
+  var bip = dispatchWindow('beforeinstallprompt', { prompt: function () {} });
+  check('poziv za namestitev ni prestrežen — brskalnik ga ponudi sam', bip.defaultPrevented !== true);
+
+  console.log('\n--- osvežitev ---');
+  var unregistered = 0, cachesCleared = 0, reloaded = 0;
+  global.navigator.serviceWorker = {
+    getRegistrations: function () {
+      return Promise.resolve([{ unregister: function () { unregistered++; return Promise.resolve(); } }]);
+    }
+  };
+  global.caches = {
+    keys: function () { return Promise.resolve(['a', 'b']); },
+    delete: function () { cachesCleared++; return Promise.resolve(true); }
+  };
+  global.location.reload = function () { reloaded++; };
+  el.btnRefresh.dispatch('click');
+  await tick(20);
+  check('gumb Osveži odjavi service worker', unregistered === 1);
+  check('gumb Osveži počisti predpomnilnike', cachesCleared === 2);
+  check('gumb Osveži nato znova naloži stran', reloaded === 1);
 
   console.log('\nSKUPAJ: ' + passes + '/' + (passes + fails.length));
   if (fails.length) console.log('NEUSPELI: ' + fails.join('; '));

@@ -55,6 +55,7 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 
 /* ---------- noga ---------- */
 .footer{
+  display:flex;flex-direction:column;align-items:center;gap:12px;
   text-align:center;padding:4px 18px calc(22px + env(safe-area-inset-bottom));
   max-width:1000px;margin:0 auto;
 }
@@ -77,8 +78,6 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 }
 .btn-danger{background:transparent;color:var(--danger);border-color:var(--danger-line);box-shadow:none}
 .btn-sm{padding:9px 13px;font-size:.85rem;font-weight:550;border-radius:var(--radius-sm)}
-/* gumb za namestitev — viden le, dokler aplikacija ni nameščena */
-.btn-install{border-color:var(--accent-2);color:var(--accent)}
 @media (hover:hover){
   .btn:hover{background:#26303e;border-color:#36435a}
   .btn-primary:hover{background:linear-gradient(180deg,#5ce68f,var(--accent))}
@@ -286,6 +285,13 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   padding:14px 16px;border-top:1px solid var(--line-soft);
   max-height:46vh;overflow:auto;flex:none;
 }
+.save-row{display:flex;align-items:center;gap:10px}
+.save-status{
+  display:inline-flex;align-items:center;gap:5px;
+  font-size:.85rem;font-weight:600;color:var(--accent);
+  opacity:1;transition:opacity .4s ease;
+}
+.save-status.fade{opacity:0}
 .garancija{
   margin:0 0 12px;padding:10px 12px;border-radius:var(--radius-sm);
   font-size:.85rem;font-weight:600;

@@ -53,19 +53,20 @@ pošteno javi, da ni prepričana, in vogale nastaviš ročno. Zato slikaj na tem
 ## Testi
 
 ```bash
-npm test          # vsi trije testi (68 preverb, brez zunanjih odvisnosti)
+npm test          # vsi trije testi (66 preverb, brez zunanjih odvisnosti)
 ```
 
 **`test/detect.node.test.js` — zaznava (9/9).** Sintetizira fotografije z znanimi vogali
 (raven, zavrten, perspektiva, senca, majhen račun, ležeč račun, bela podlaga, prazna slika,
 izrojeni vogali) in preveri, da je napaka vogalov pod 3 % diagonale in da je izrez svetel.
 
-**`test/app.node.test.js` — vmesnik (35/35).** Posnema DOM, kamero, IndexedDB in Blob ter
+**`test/app.node.test.js` — vmesnik (34/34).** Posnema DOM, kamero, IndexedDB in Blob ter
 požene pravi `js/app.js` skozi celoten potek: zajem → zaznava → vlečenje vogala → obrez →
-shranjevanje → galerija → pregled → prenos → izbris, vključno s preklicem, vrtenjem in
-pozivom za namestitev.
+shranjevanje → galerija → pregled → prenos → izbris, vključno s preklicem, vrtenjem, tem da
+se poziv za namestitev ne prestreza, in trdo osvežitvijo (odjava service workerja, brisanje
+predpomnilnikov, ponovno nalaganje).
 
-**`test/pwa.node.test.js` — namestljivost (24/24).** Preveri pogoje, ki jih Chrome zahteva
+**`test/pwa.node.test.js` — namestljivost (23/23).** Preveri pogoje, ki jih Chrome zahteva
 za namestitev: polja v manifestu, obstoj ikon in ujemanje njihovih **dejanskih** velikosti
 (iz glave PNG) z navedenimi, povezavo na manifest, registracijo service workerja in to,
 da so vse predpomnjene datoteke res v repozitoriju.
@@ -89,8 +90,8 @@ da so vse predpomnjene datoteke res v repozitoriju.
 Aplikacija je PWA, zato jo Chrome namesti kot pravo namizno/telefonsko aplikacijo:
 svoja ikona, svoje okno brez naslovne vrstice, deluje tudi brez povezave.
 
-V glavi strani se pokaže gumb **⬇ Namesti**, brž ko Chrome ugotovi, da je namestitev
-mogoča. Enako ponudi tudi sam — ikona v naslovni vrstici oz. meni ⋮ → *Namesti Računi*.
+Aplikacija nima lastnega gumba za namestitev — Chrome jo ponudi sam, brž ko ugotovi,
+da je namestitev mogoča: ikona v naslovni vrstici oz. meni ⋮ → *Namesti Računi*.
 
 **Chrome ponudi namestitev samo na varnem izvoru** (`https://` ali `localhost`).
 To je edini pogoj, ki ga ni v tem repozitoriju:
@@ -117,7 +118,7 @@ git push
 
 Nato v repozitoriju na GitHubu: *Settings → Pages → Source: Deploy from a branch →
 `main` / `(root)`*. Čez minuto je stran na `https://zig4to.github.io/Racuni/`.
-Odpri jo v Chromu na telefonu → **⬇ Namesti** (ali meni ⋮ → *Namesti aplikacijo*).
+Odpri jo v Chromu na telefonu → meni ⋮ → *Namesti aplikacijo*.
 
 > Vse poti v aplikaciji so relativne, zato deluje tudi v podmapi, kakršno da GitHub Pages.
 
