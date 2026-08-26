@@ -1,9 +1,9 @@
 /* Predpomnilnik lupine aplikacije, da deluje tudi brez povezave.
    Ob spremembi datotek povečaj VERSION. */
-var VERSION = 'racuni-v5';
+var VERSION = 'racuni-v7';
 var SHELL = [
   './', './index.html', './style.css', './icon.svg', './manifest.json',
-  './js/db.js', './js/detect.js', './js/app.js',
+  './js/db.js', './js/detect.js', './js/app.js', './js/sync.js', './js/cloud.js',
   './icons/icon-192.png', './icons/icon-512.png',
   './icons/icon-maskable-192.png', './icons/icon-maskable-512.png',
   './icons/apple-touch-icon.png'

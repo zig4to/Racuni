@@ -11,7 +11,9 @@
   ['inputCamera', 'inputPicker', 'viewGallery', 'viewEdit', 'grid', 'emptyState',
    'preview', 'overlay', 'shade', 'quad', 'stage', 'hint', 'enhance', 'btnRotate',
    'btnReset', 'btnCancel', 'btnCrop', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
-   'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnInstall'
+   'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnInstall',
+   'fShop', 'fItem', 'fDate', 'fWarranty', 'vShop', 'vItem', 'vDate', 'vWarranty',
+   'btnSaveMeta', 'viewerWarranty'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -45,6 +47,73 @@
     function p(n) { return String(n).padStart(2, '0'); }
     return 'racun_' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
       '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '.jpg';
+  }
+
+  // ------------------------------------------------------- podatki o nakupu
+  var editFields = { shop: el.fShop, item: el.fItem, date: el.fDate, warranty: el.fWarranty };
+  var viewFields = { shop: el.vShop, item: el.vItem, date: el.vDate, warranty: el.vWarranty };
+
+  function today() {
+    var d = new Date();
+    function p(n) { return String(n).padStart(2, '0'); }
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
+  }
+
+  /* Stiri polja -> objekt, kakrsen gre v IndexedDB in naprej v oblak. */
+  function readFields(f) {
+    var years = parseFloat(f.warranty.value);
+    return {
+      trgovina: (f.shop.value || '').trim(),
+      izdelek: (f.item.value || '').trim(),
+      kupljeno: f.date.value || '',
+      garancija_let: isNaN(years) ? '' : years
+    };
+  }
+
+  function writeFields(f, rec) {
+    f.shop.value = rec.trgovina || '';
+    f.item.value = rec.izdelek || '';
+    f.date.value = rec.kupljeno || '';
+    f.warranty.value = (rec.garancija_let === 0 || rec.garancija_let) ? rec.garancija_let : '';
+  }
+
+  /* Iztek garancije: datum nakupa + leta. Pol leta = 6 mesecev, zato racunamo
+     v mesecih; setMonth sam prestopi v naslednje leto. */
+  function warrantyEnd(rec) {
+    if (!rec.kupljeno || !(rec.garancija_let > 0)) return null;
+    var p = String(rec.kupljeno).split('-');
+    if (p.length !== 3) return null;
+    var d = new Date(+p[0], +p[1] - 1, +p[2]);
+    if (isNaN(d.getTime())) return null;
+    d.setMonth(d.getMonth() + Math.round(rec.garancija_let * 12));
+    return d;
+  }
+
+  /* 1 dan, 2 dneva, 3 dni — slovenska dvojina tudi tukaj. */
+  function pluralDays(n) {
+    var r = n % 100;
+    if (r === 1) return n + ' dan';
+    if (r === 2) return n + ' dneva';
+    return n + ' dni';
+  }
+
+  function warrantyInfo(rec) {
+    var end = warrantyEnd(rec);
+    if (!end) return null;
+    var days = Math.ceil((end.getTime() - Date.now()) / 86400000);
+    var datum = end.toLocaleDateString('sl-SI', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    if (days < 0) return { text: 'Garancija je potekla ' + datum, cls: ' potekla', kratko: 'garancija potekla' };
+    if (days <= 60) return { text: 'Garancija poteče ' + datum + ' — še ' + pluralDays(days), cls: ' kmalu', kratko: 'še ' + pluralDays(days) };
+    return { text: 'Garancija do ' + datum, cls: '', kratko: 'do ' + datum };
+  }
+
+  function renderWarranty(rec) {
+    var w = warrantyInfo(rec);
+    el.viewerWarranty.hidden = !w;
+    if (w) {
+      el.viewerWarranty.textContent = w.text;
+      el.viewerWarranty.className = 'garancija' + w.cls;
+    }
   }
 
   function canvasToBlob(canvas, quality) {
@@ -195,14 +264,18 @@
       Promise.all([canvasToBlob(canvas, JPEG_Q), canvasToBlob(thumb, 0.75)])
         .then(function (blobs) {
           var id = Date.now();
+          var f = readFields(editFields);
           return DB.add({
             id: id, created: id, blob: blobs[0], thumb: blobs[1],
-            w: canvas.width, h: canvas.height, size: blobs[0].size
+            w: canvas.width, h: canvas.height, size: blobs[0].size,
+            trgovina: f.trgovina, izdelek: f.izdelek,
+            kupljeno: f.kupljeno, garancija_let: f.garancija_let
           });
         })
         .then(function () {
           state.work = null; state.corners = null;
           showGallery();
+          if (window.Sync) Sync.afterSave();   // v ozadju, vmesnika ne zadrzuje
           return renderGallery();
         })
         .catch(function (err) {
@@ -233,7 +306,28 @@
         date.textContent = fmtDate(rec.created);
 
         card.appendChild(img);
+
+        /* Naslov kartice: izdelek, sicer trgovina. Brez obojega ostane le datum,
+           tako kot pri racunih, shranjenih pred temi polji. */
+        var naslov = rec.izdelek || rec.trgovina || '';
+        if (naslov) {
+          var title = document.createElement('div');
+          title.className = 'card-title';
+          title.textContent = naslov;
+          if (rec.izdelek && rec.trgovina) title.title = rec.izdelek + ' · ' + rec.trgovina;
+          card.appendChild(title);
+        }
+
         card.appendChild(date);
+
+        var w = warrantyInfo(rec);
+        if (w) {
+          var badge = document.createElement('div');
+          badge.className = 'card-garancija' + w.cls;
+          badge.textContent = w.kratko;
+          card.appendChild(badge);
+        }
+
         card.addEventListener('click', function () { openViewer(rec.id); });
         el.grid.appendChild(card);
       });
@@ -267,6 +361,8 @@
       state.objectUrl = URL.createObjectURL(rec.blob);
       el.viewerImg.src = state.objectUrl;
       el.viewerMeta.textContent = fmtDate(rec.created) + ' · ' + rec.w + '×' + rec.h + ' · ' + fmtSize(rec.size);
+      writeFields(viewFields, rec);
+      renderWarranty(rec);
       el.btnShare.hidden = !(navigator.canShare && navigator.canShare({
         files: [new File([rec.blob], 'test.jpg', { type: 'image/jpeg' })]
       }));
@@ -299,16 +395,45 @@
     navigator.share({ files: [file], title: 'Račun' }).catch(function () { /* preklic */ });
   }
 
+  /* Podatke se da vpisati ali popraviti tudi pozneje — racune, ki so bili
+     shranjeni, preden so ta polja obstajala, se tako dopolni za nazaj. */
+  function saveMeta() {
+    if (!state.current) return;
+    var rec = state.current, f = readFields(viewFields);
+    rec.trgovina = f.trgovina;
+    rec.izdelek = f.izdelek;
+    rec.kupljeno = f.kupljeno;
+    rec.garancija_let = f.garancija_let;
+    rec.synced = 0;                       // sprememba mora se v oblak
+
+    el.btnSaveMeta.disabled = true;
+    DB.add(rec).then(function () {
+      renderWarranty(rec);
+      if (window.Sync) Sync.afterSave();
+      return renderGallery();
+    }).then(function () {
+      el.btnSaveMeta.disabled = false;
+    });
+  }
+
   function removeCurrent() {
     if (!state.current) return;
     if (!confirm('Izbrišem ta račun?')) return;
     var id = state.current.id;
     closeViewer();
-    DB.remove(id).then(renderGallery);
+    DB.remove(id).then(function () {
+      if (window.Sync) Sync.afterDelete(id);   // izbrise se tudi v oblaku
+      return renderGallery();
+    });
   }
 
   // ------------------------------------------------------------- preklop pogledov
   function showEdit() {
+    /* Vsak nov zajem se zacne s praznimi polji in danasnjim datumom — racun
+       navadno slikas isti dan, ko ga dobis. */
+    writeFields(editFields, {});
+    el.fDate.value = today();
+
     el.viewGallery.hidden = true;
     el.viewEdit.hidden = false;
     window.scrollTo(0, 0);
@@ -339,6 +464,7 @@
   el.btnDownload.addEventListener('click', download);
   el.btnShare.addEventListener('click', share);
   el.btnDelete.addEventListener('click', removeCurrent);
+  el.btnSaveMeta.addEventListener('click', saveMeta);
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !el.viewer.hidden) closeViewer();
   });
@@ -377,6 +503,9 @@
       el.btnInstall.hidden = true;
     });
   }
+
+  /* Majhna povrsina za js/sync.js, da po prenosu iz oblaka osvezi galerijo. */
+  window.App = { refreshGallery: renderGallery };
 
   renderGallery();
 

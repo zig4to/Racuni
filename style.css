@@ -179,3 +179,63 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
 }
+
+/* ---------- oblak ---------- */
+.cloud-box{
+  flex:1;overflow:auto;
+  padding:22px 18px calc(22px + env(safe-area-inset-bottom));
+  display:flex;flex-direction:column;gap:14px;
+  max-width:460px;width:100%;margin:0 auto;
+}
+.cloud-box h2{font-size:1.15rem}
+.field{display:flex;flex-direction:column;gap:7px;font-size:.85rem;color:var(--muted)}
+.field input{
+  padding:13px 14px;border-radius:var(--radius-sm);
+  border:1px solid var(--line);background:var(--panel);color:var(--text);
+  font:inherit;font-size:.98rem;
+}
+.field input:focus-visible{outline:none;box-shadow:var(--ring);border-color:var(--accent-2)}
+.cloud-err{
+  margin:0;padding:11px 13px;border-radius:var(--radius-sm);
+  background:rgba(248,113,113,.1);border:1px solid var(--danger-line);
+  color:var(--danger);font-size:.85rem;
+}
+/* utrip na gumbu v glavi, dokler sinhronizacija tece */
+.busy-dot{border-color:var(--accent-2);animation:utrip 1.1s ease-in-out infinite}
+@keyframes utrip{50%{opacity:.45}}
+
+/* ---------- podatki o nakupu ---------- */
+.podatki{display:flex;flex-direction:column;gap:11px}
+.podatki-par{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.viewer-podatki{
+  padding:14px 16px;border-top:1px solid var(--line-soft);
+  max-height:46vh;overflow:auto;flex:none;
+}
+.garancija{
+  margin:0 0 12px;padding:10px 12px;border-radius:var(--radius-sm);
+  font-size:.85rem;font-weight:600;
+  background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.32);color:var(--accent);
+}
+.garancija.kmalu{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.4);color:#fbbf24}
+.garancija.potekla{background:rgba(248,113,113,.1);border-color:var(--danger-line);color:var(--danger)}
+
+/* naslov in znacka na kartici v galeriji */
+.card-title{
+  position:absolute;left:0;right:0;bottom:22px;padding:0 9px;
+  font-size:.78rem;font-weight:650;color:#fff;line-height:1.25;
+  text-shadow:0 1px 3px rgba(0,0,0,.9);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+/* daljsi preliv, da sta naslov in datum berljiva tudi na svetli slicici */
+.card .date{padding-top:42px;background:linear-gradient(transparent,rgba(0,0,0,.88) 55%)}
+.card-garancija{
+  position:absolute;top:7px;right:7px;max-width:calc(100% - 14px);
+  padding:3px 7px;border-radius:999px;
+  font-size:.63rem;font-weight:650;
+  background:rgba(12,15,20,.82);color:var(--accent);
+  border:1px solid rgba(74,222,128,.4);
+  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+.card-garancija.kmalu{color:#fbbf24;border-color:rgba(251,191,36,.45)}
+.card-garancija.potekla{color:var(--danger);border-color:var(--danger-line)}
