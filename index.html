@@ -34,15 +34,58 @@
 <main>
   <!-- ================= GALERIJA ================= -->
   <section id="viewGallery">
-    <div class="capture">
-      <label class="btn btn-primary">
-        📷 Slikaj račun
-        <input id="inputCamera" type="file" accept="image/*" capture="environment" hidden>
-      </label>
-      <label class="btn">
-        🖼️ Izberi sliko
-        <input id="inputPicker" type="file" accept="image/*" hidden>
-      </label>
+    <div id="captureRow" class="capture">
+      <button id="btnCamera" type="button" class="btn btn-primary">
+        <svg class="btn-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path d="M4 8h3l1.6-2.2a1 1 0 0 1 .8-.4h5.2a1 1 0 0 1 .8.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="12" cy="13.3" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Slikaj račun
+      </button>
+      <button id="btnPicker" type="button" class="btn">
+        <svg class="btn-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/>
+          <path d="M4.5 16 9 11.5a1.5 1.5 0 0 1 2 0l4 4M13.5 13.5 15.5 11.5a1.5 1.5 0 0 1 2 0L21 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Izberi sliko
+      </button>
+    </div>
+    <input id="inputCamera" type="file" accept="image/*" capture="environment" hidden>
+    <input id="inputPicker" type="file" accept="image/*" hidden>
+
+    <div id="formNew" class="form-new" hidden>
+      <h2 class="section-title">Nov račun</h2>
+      <div class="field">
+        <label for="fTrgovina">Trgovina</label>
+        <input id="fTrgovina" type="text" placeholder="npr. Mercator" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="fIzdelek">Izdelek</label>
+        <input id="fIzdelek" type="text" placeholder="npr. Pralni stroj" autocomplete="off">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fDatum">Datum nakupa</label>
+          <input id="fDatum" type="date">
+        </div>
+        <div class="field">
+          <label for="fGarancija">Garancija (let)</label>
+          <input id="fGarancija" type="number" min="0" step="1" inputmode="numeric" placeholder="npr. 2">
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnFormCancel" type="button" class="btn">Prekliči</button>
+        <button id="btnFormNext" type="button" class="btn btn-primary form-next" disabled>Naprej →</button>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <svg class="search-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+        <line x1="21" y1="21" x2="16.2" y2="16.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input id="searchInput" type="search" class="search-input" placeholder="Išči po trgovini, izdelku ali datumu …" autocomplete="off" enterkeyhint="search">
     </div>
 
     <hr class="divider">
@@ -53,6 +96,12 @@
       <span class="empty-mark">🧾</span>
       Ni še shranjenih računov.
       <span class="muted">Slikaj račun na temni podlagi (miza, tla) — bel list bo samodejno izrezan.</span>
+    </p>
+
+    <p id="searchEmpty" class="empty" hidden>
+      <span class="empty-mark">🔍</span>
+      Ni zadetkov.
+      <span class="muted">Poskusi z drugim iskalnim nizom.</span>
     </p>
 
     <div id="grid" class="grid"></div>
@@ -82,24 +131,6 @@
       <button id="btnReset" class="btn btn-sm">⟲ Ponovna zaznava</button>
     </div>
 
-    <div class="podatki">
-      <label class="field">Trgovina
-        <input id="fShop" type="text" autocomplete="off" placeholder="npr. Bigbang">
-      </label>
-      <label class="field">Izdelek
-        <input id="fItem" type="text" autocomplete="off" placeholder="npr. sesalnik Bosch">
-      </label>
-      <div class="podatki-par">
-        <label class="field">Datum nakupa
-          <input id="fDate" type="date">
-        </label>
-        <label class="field">Garancija (let)
-          <input id="fWarranty" type="number" min="0" max="99" step="0.5" inputmode="decimal" placeholder="2">
-        </label>
-      </div>
-      <p class="muted">Vse to lahko vpišeš tudi pozneje, ko odpreš shranjen račun.</p>
-    </div>
-
     <div class="actions">
       <button id="btnCancel" class="btn">Prekliči</button>
       <button id="btnCrop" class="btn btn-primary">✓ Obreži in shrani</button>
@@ -117,23 +148,25 @@
 
   <div class="viewer-podatki">
     <p id="viewerWarranty" class="garancija" hidden></p>
-    <div class="podatki">
-      <label class="field">Trgovina
-        <input id="vShop" type="text" autocomplete="off" placeholder="npr. Bigbang">
-      </label>
-      <label class="field">Izdelek
-        <input id="vItem" type="text" autocomplete="off" placeholder="npr. sesalnik Bosch">
-      </label>
-      <div class="podatki-par">
-        <label class="field">Datum nakupa
-          <input id="vDate" type="date">
-        </label>
-        <label class="field">Garancija (let)
-          <input id="vWarranty" type="number" min="0" max="99" step="0.5" inputmode="decimal" placeholder="2">
-        </label>
-      </div>
-      <button id="btnSaveMeta" class="btn btn-sm">💾 Shrani podatke</button>
+    <div class="field">
+      <label for="vTrgovina">Trgovina</label>
+      <input id="vTrgovina" type="text" placeholder="npr. Mercator" autocomplete="off">
     </div>
+    <div class="field">
+      <label for="vIzdelek">Izdelek</label>
+      <input id="vIzdelek" type="text" placeholder="npr. Pralni stroj" autocomplete="off">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="vDatum">Datum nakupa</label>
+        <input id="vDatum" type="date">
+      </div>
+      <div class="field">
+        <label for="vGarancija">Garancija (let)</label>
+        <input id="vGarancija" type="number" min="0" step="1" inputmode="numeric" placeholder="npr. 2">
+      </div>
+    </div>
+    <button id="btnSaveMeta" class="btn btn-sm">💾 Shrani podatke</button>
   </div>
 
   <div class="viewer-actions">
@@ -157,12 +190,14 @@
         Računi se shranijo v Supabase in so vidni na vseh tvojih napravah.
         Brez prijave aplikacija dela naprej, le lokalno.
       </p>
-      <label class="field">E-pošta
+      <div class="field">
+        <label for="cloudEmail">E-pošta</label>
         <input id="cloudEmail" type="email" autocomplete="username" inputmode="email">
-      </label>
-      <label class="field">Geslo
+      </div>
+      <div class="field">
+        <label for="cloudPass">Geslo</label>
         <input id="cloudPass" type="password" autocomplete="current-password">
-      </label>
+      </div>
       <p id="cloudErr" class="cloud-err" hidden></p>
       <button id="btnCloudLogin" class="btn btn-primary">Prijava</button>
     </div>

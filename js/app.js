@@ -12,8 +12,9 @@
    'preview', 'overlay', 'shade', 'quad', 'stage', 'hint', 'enhance', 'btnRotate',
    'btnReset', 'btnCancel', 'btnCrop', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
    'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnInstall',
-   'fShop', 'fItem', 'fDate', 'fWarranty', 'vShop', 'vItem', 'vDate', 'vWarranty',
-   'btnSaveMeta', 'viewerWarranty'
+   'formNew', 'fTrgovina', 'fIzdelek', 'fDatum', 'fGarancija', 'btnFormNext',
+   'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
+   'vTrgovina', 'vIzdelek', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -22,7 +23,9 @@
     work: null,       // canvas z izvorno (pomanjšano) fotografijo
     corners: null,    // 4 vogali v koordinatah work canvasa
     current: null,    // odprt zapis v pregledovalniku
-    objectUrl: null
+    objectUrl: null,
+    meta: null,       // podatki iz obrazca (trgovina, izdelek, datum nakupa, garancija) — baza sledi kasneje
+    pendingAction: null   // 'camera' ali 'picker' — kateri zajem je obrazec odprl
   };
 
   // ------------------------------------------------------------- pripomočki
@@ -50,8 +53,9 @@
   }
 
   // ------------------------------------------------------- podatki o nakupu
-  var editFields = { shop: el.fShop, item: el.fItem, date: el.fDate, warranty: el.fWarranty };
-  var viewFields = { shop: el.vShop, item: el.vItem, date: el.vDate, warranty: el.vWarranty };
+  /* Podatke o nakupu vpišeš pred zajemom (obrazec "Nov račun"), popraviš pa jih
+     lahko pozneje v pregledu — zato ista polja obstajajo na dveh mestih. */
+  var viewFields = { shop: el.vTrgovina, item: el.vIzdelek, date: el.vDatum, warranty: el.vGarancija };
 
   function today() {
     var d = new Date();
@@ -264,16 +268,22 @@
       Promise.all([canvasToBlob(canvas, JPEG_Q), canvasToBlob(thumb, 0.75)])
         .then(function (blobs) {
           var id = Date.now();
-          var f = readFields(editFields);
+          /* Podatki iz obrazca, izpolnjenega pred zajemom. Če je bil preskočen
+             (npr. zajem sprožen drugače), zapis nastane brez njih in jih je
+             mogoče vpisati pozneje v pregledu. */
+          var m = state.meta || {};
           return DB.add({
             id: id, created: id, blob: blobs[0], thumb: blobs[1],
             w: canvas.width, h: canvas.height, size: blobs[0].size,
-            trgovina: f.trgovina, izdelek: f.izdelek,
-            kupljeno: f.kupljeno, garancija_let: f.garancija_let
+            trgovina: m.trgovina || '',
+            izdelek: m.izdelek || '',
+            kupljeno: m.datumNakupa || '',
+            garancija_let: (m.garancijaLet === 0 || m.garancijaLet) ? m.garancijaLet : ''
           });
         })
         .then(function () {
           state.work = null; state.corners = null;
+          resetForm();
           showGallery();
           if (window.Sync) Sync.afterSave();   // v ozadju, vmesnika ne zadrzuje
           return renderGallery();
@@ -286,10 +296,23 @@
   }
 
   // --------------------------------------------------------------- galerija
+  /* Išče po trgovini, izdelku in obeh datumih — nakupa in shranjevanja. */
+  function matchesSearch(rec, q) {
+    if (!q) return true;
+    return [rec.trgovina || '', rec.izdelek || '', rec.kupljeno || '', fmtDate(rec.created)]
+      .join(' ').toLowerCase().indexOf(q) >= 0;
+  }
+
   function renderGallery() {
-    return DB.all().then(function (items) {
+    return DB.all().then(function (all) {
+      var q = (el.searchInput.value || '').trim().toLowerCase();
+      var items = all.filter(function (rec) { return matchesSearch(rec, q); });
+
       el.grid.innerHTML = '';
-      el.emptyState.hidden = items.length > 0;
+      /* Poziv o prazni galeriji velja za res prazno shrambo; kadar filtrira
+         iskanje, je pravo sporočilo drugo. */
+      el.emptyState.hidden = all.length > 0;
+      el.searchEmpty.hidden = !(all.length > 0 && items.length === 0);
 
       items.forEach(function (rec) {
         var card = document.createElement('div');
@@ -332,7 +355,8 @@
         el.grid.appendChild(card);
       });
 
-      updateStorageInfo(items);
+      // Števec v glavi pove, koliko je shranjenega — ne, koliko jih iskanje pokaže.
+      updateStorageInfo(all);
     });
   }
 
@@ -427,13 +451,52 @@
     });
   }
 
+  // -------------------------------------------------------------- obrazec (nov račun)
+  function formFilled() {
+    return el.fTrgovina.value.trim() !== '' && el.fIzdelek.value.trim() !== '';
+  }
+
+  function updateFormNext() {
+    el.btnFormNext.disabled = !formFilled();
+  }
+
+  function openForm(action) {
+    state.pendingAction = action;
+    // Račun navadno slikaš isti dan, ko ga dobiš — datum ponudimo vnaprej.
+    if (!el.fDatum.value) el.fDatum.value = today();
+    el.captureRow.hidden = true;
+    el.formNew.hidden = false;
+  }
+
+  function closeForm() {
+    state.pendingAction = null;
+    el.formNew.hidden = true;
+    el.captureRow.hidden = false;
+  }
+
+  function confirmForm() {
+    state.meta = {
+      trgovina: el.fTrgovina.value.trim(),
+      izdelek: el.fIzdelek.value.trim(),
+      datumNakupa: el.fDatum.value || null,
+      garancijaLet: el.fGarancija.value ? Number(el.fGarancija.value) : 0
+    };
+    var action = state.pendingAction;
+    closeForm();
+    if (action === 'camera') el.inputCamera.click();
+    else if (action === 'picker') el.inputPicker.click();
+  }
+
+  function resetForm() {
+    el.fTrgovina.value = ''; el.fIzdelek.value = '';
+    el.fDatum.value = ''; el.fGarancija.value = '';
+    state.meta = null;
+    updateFormNext();
+    closeForm();
+  }
+
   // ------------------------------------------------------------- preklop pogledov
   function showEdit() {
-    /* Vsak nov zajem se zacne s praznimi polji in danasnjim datumom — racun
-       navadno slikas isti dan, ko ga dobis. */
-    writeFields(editFields, {});
-    el.fDate.value = today();
-
     el.viewGallery.hidden = true;
     el.viewEdit.hidden = false;
     window.scrollTo(0, 0);
@@ -450,6 +513,14 @@
     e.target.value = '';   // isto sliko je mogoče izbrati znova
     handleFile(f);
   }
+
+  el.fTrgovina.addEventListener('input', updateFormNext);
+  el.fIzdelek.addEventListener('input', updateFormNext);
+  el.btnCamera.addEventListener('click', function () { openForm('camera'); });
+  el.btnPicker.addEventListener('click', function () { openForm('picker'); });
+  el.btnFormNext.addEventListener('click', confirmForm);
+  el.btnFormCancel.addEventListener('click', resetForm);
+  el.searchInput.addEventListener('input', function () { renderGallery(); });
 
   el.inputCamera.addEventListener('change', onPick);
   el.inputPicker.addEventListener('change', onPick);

@@ -77,7 +77,71 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 .check input{width:17px;height:17px;accent-color:var(--accent);cursor:pointer}
 
 .capture{display:flex;gap:12px}
-.capture .btn{flex:1;padding:17px 16px}
+.capture .btn{
+  flex:1;padding:17px 18px;border-radius:999px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 10px 26px -18px rgba(74,222,128,.35);
+}
+.capture .btn-primary{
+  box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 10px 28px -14px rgba(74,222,128,.9);
+}
+.capture .btn:not(.btn-primary){
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  transition:transform .12s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.capture .btn:not(.btn-primary) .btn-icon{color:var(--accent);opacity:.9}
+@media (hover:hover){
+  .capture .btn:not(.btn-primary):hover{border-color:var(--accent-2)}
+}
+.btn-icon{flex:none}
+
+/* ---------- obrazec za nov račun ---------- */
+.form-new{
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  padding:18px 18px 20px;box-shadow:var(--shadow);
+}
+.form-new .section-title{margin-bottom:14px}
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:.8rem;font-weight:600;color:var(--muted)}
+.field input{
+  width:100%;appearance:none;-webkit-appearance:none;
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius-sm);
+  color:var(--text);font:inherit;font-size:.98rem;padding:12px 14px;
+  transition:border-color .15s ease, box-shadow .15s ease;
+}
+.field input::placeholder{color:var(--muted)}
+.field input:focus{outline:none;border-color:var(--accent-2);box-shadow:var(--ring)}
+.field-row{display:flex;gap:12px}
+.field-row .field{flex:1}
+.form-next:disabled{opacity:.45;cursor:not-allowed;box-shadow:none}
+.form-next:disabled:active{transform:none}
+
+@media (max-width:420px){
+  .field-row{flex-direction:column;gap:0}
+}
+
+/* ---------- iskalnik ---------- */
+.search-bar{
+  position:relative;display:flex;align-items:center;margin-top:14px;
+  border-radius:999px;background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.05), 0 10px 26px -18px rgba(74,222,128,.35);
+  transition:border-color .18s ease, box-shadow .18s ease;
+}
+.search-icon{
+  position:absolute;left:20px;color:var(--accent);pointer-events:none;opacity:.85;
+}
+.search-input{
+  width:100%;appearance:none;-webkit-appearance:none;
+  background:transparent;border:0;color:var(--text);
+  font:inherit;font-size:1.02rem;font-weight:500;
+  padding:18px 20px 18px 52px;border-radius:999px;
+}
+.search-input::placeholder{color:var(--muted)}
+.search-input::-webkit-search-cancel-button{display:none}
+.search-bar:focus-within{
+  border-color:var(--accent-2);
+  box-shadow:var(--ring), 0 10px 30px -16px rgba(74,222,128,.55);
+}
 
 /* ---------- ločilna črta in naslov razdelka ---------- */
 .divider{
@@ -188,13 +252,8 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   max-width:460px;width:100%;margin:0 auto;
 }
 .cloud-box h2{font-size:1.15rem}
-.field{display:flex;flex-direction:column;gap:7px;font-size:.85rem;color:var(--muted)}
-.field input{
-  padding:13px 14px;border-radius:var(--radius-sm);
-  border:1px solid var(--line);background:var(--panel);color:var(--text);
-  font:inherit;font-size:.98rem;
-}
-.field input:focus-visible{outline:none;box-shadow:var(--ring);border-color:var(--accent-2)}
+/* .field in .field-row sta že definirana pri obrazcu za nov račun — obrazca
+   za prijavo in za pregled uporabljata isti razred, da sta polji videti enako. */
 .cloud-err{
   margin:0;padding:11px 13px;border-radius:var(--radius-sm);
   background:rgba(248,113,113,.1);border:1px solid var(--danger-line);
@@ -205,8 +264,6 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 @keyframes utrip{50%{opacity:.45}}
 
 /* ---------- podatki o nakupu ---------- */
-.podatki{display:flex;flex-direction:column;gap:11px}
-.podatki-par{display:grid;grid-template-columns:1fr 1fr;gap:11px}
 .viewer-podatki{
   padding:14px 16px;border-top:1px solid var(--line-soft);
   max-height:46vh;overflow:auto;flex:none;
