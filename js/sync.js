@@ -260,8 +260,9 @@ window.Sync = (function () {
         return res.json();
       })
       .then(function (rows) {
-        var todo = [], osvezi = [];
+        var todo = [], osvezi = [], zunaj = {};
         rows.forEach(function (row) {
+          zunaj[row.id] = true;
           if (gone.indexOf(row.id) >= 0) return;          // izbrisan tukaj
           var lokalni = mine[row.id];
           if (!lokalni) { todo.push(row); return; }
@@ -272,17 +273,25 @@ window.Sync = (function () {
           if (lokalni.synced && !sameMeta(lokalni, meta(row))) osvezi.push(row);
         });
 
-        if (!todo.length && !osvezi.length) return 0;
+        /* Ze usklajen zapis, ki ga med oblakovimi vrsticami ni vec — nekdo ga
+           je izbrisal drugje (npr. rocno v Supabase). Brez tega bi tak racun
+           tu ostal za vedno, saj pull sicer samo dodaja/posodablja. Ce zapis
+           se ceka na prvo oddajo (synced=0), ga pustimo pri miru. */
+        var izbrisani = local.filter(function (r) { return r.synced && !zunaj[r.id]; });
 
-        return series(osvezi, function (row) {
-          var rec = mine[row.id], m = meta(row);
-          rec.trgovina = m.trgovina;
-          rec.izdelek = m.izdelek;
-          rec.znamka = m.znamka;
-          rec.model = m.model;
-          rec.kupljeno = m.kupljeno;
-          rec.garancija_let = m.garancija_let;
-          return DB.add(rec);
+        if (!todo.length && !osvezi.length && !izbrisani.length) return 0;
+
+        return series(izbrisani, function (r) { return DB.remove(r.id); }).then(function () {
+          return series(osvezi, function (row) {
+            var rec = mine[row.id], m = meta(row);
+            rec.trgovina = m.trgovina;
+            rec.izdelek = m.izdelek;
+            rec.znamka = m.znamka;
+            rec.model = m.model;
+            rec.kupljeno = m.kupljeno;
+            rec.garancija_let = m.garancija_let;
+            return DB.add(rec);
+          });
         }).then(function () {
           return series(todo, function (row, i) {
             status('Prenašam ' + (i + 1) + '/' + todo.length + '…', true);
@@ -299,7 +308,7 @@ window.Sync = (function () {
                 });
               });
           });
-        }).then(function () { return todo.length + osvezi.length; });
+        }).then(function () { return todo.length + osvezi.length + izbrisani.length; });
       });
   }
 
