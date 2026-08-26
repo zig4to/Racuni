@@ -28,8 +28,10 @@ window.Sync = (function () {
   // ------------------------------------------------------------ pripomočki
   function configured() { return !!(URL_BASE && API_KEY); }
 
-  function status(text, busy) {
-    if (typeof Sync.onStatus === 'function') Sync.onStatus(text, !!busy);
+  /* kind: 'ok' | 'error' | 'info' (privzeto) — pove poslušalcu, ali sporočilo
+     pomeni uspeh, napako ali je zgolj vmesno stanje (npr. "Nalagam…"). */
+  function status(text, busy, kind) {
+    if (typeof Sync.onStatus === 'function') Sync.onStatus(text, !!busy, kind || 'info');
   }
 
   function readJson(key, fallback) {
@@ -62,12 +64,16 @@ window.Sync = (function () {
 
   // ------------------------------------------------------------------- seja
   function normalise(json) {
+    var meta = (json.user && json.user.user_metadata) || {};
     return {
       access_token: json.access_token,
       refresh_token: json.refresh_token,
       expires_at: Math.floor(Date.now() / 1000) + (json.expires_in || 3600),
       user_id: json.user && json.user.id,
-      email: json.user && json.user.email
+      email: json.user && json.user.email,
+      /* Supabase nima privzetega imena — če ga uporabnik ni nastavil v
+         user_metadata (full_name/name), gumb prikaze izpeljano ime iz e-poste. */
+      name: meta.full_name || meta.name || null
     };
   }
 
@@ -313,16 +319,16 @@ window.Sync = (function () {
 
   // ------------------------------------------------------------------ potek
   function syncNow() {
-    if (!configured()) { status('Sinhronizacija ni nastavljena.'); return Promise.resolve(); }
-    if (!session) { status('Nisi prijavljen.'); return Promise.resolve(); }
+    if (!configured()) { status('Sinhronizacija ni nastavljena.', false, 'error'); return Promise.resolve(); }
+    if (!session) { status('Nisi prijavljen.', false, 'error'); return Promise.resolve(); }
     if (running) return Promise.resolve();
-    if (navigator.onLine === false) { status('Ni povezave.'); return Promise.resolve(); }
+    if (navigator.onLine === false) { status('Ni povezave.', false, 'error'); return Promise.resolve(); }
 
     running = true;
     status('Sinhroniziram…', true);
 
     return fresh().then(function (s) {
-      if (!s) { status('Seja je potekla — prijavi se znova.'); return null; }
+      if (!s) { status('Seja je potekla — prijavi se znova.', false, 'error'); return null; }
       return flushDeletes()
         .then(function () { return DB.all(); })
         .then(function (local) { return pull(local); })
@@ -333,15 +339,15 @@ window.Sync = (function () {
         })
         .then(function (n) {
           if (n.down || n.up) {
-            status('Sinhronizirano (↓' + n.down + ' ↑' + n.up + ').');
+            status('Sinhronizirano (↓' + n.down + ' ↑' + n.up + ').', false, 'ok');
             if (n.down && window.App) App.refreshGallery();
           } else {
-            status('Vse je usklajeno.');
+            status('Vse je usklajeno.', false, 'ok');
           }
           return n;
         });
     }).catch(function (err) {
-      status('Napaka: ' + (err.message || err));
+      status('Napaka: ' + (err.message || err), false, 'error');
     }).then(function (n) {
       running = false;
       return n;

@@ -23,16 +23,31 @@
     el.cloudErr.hidden = !msg;
   }
 
+  /* Ime na gumbu je znak, da je prijava uspela — brez njega bi gumb po
+     prijavi kazal isto splosno besedo ne glede na to, kdo je prijavljen.
+     Ce Supabase ne pozna imena (user_metadata), ga izpeljemo iz e-poste. */
+  function displayName(s) {
+    if (s.name) return s.name;
+    var local = (s.email || '').split('@')[0];
+    var first = local.split(/[^A-Za-zÀ-ſ]+/)[0] || local;
+    return first ? first.charAt(0).toUpperCase() + first.slice(1) : (s.email || 'Racun');
+  }
+
   function render() {
     var s = Sync.session();
     el.cloudLogin.hidden = !!s;
     el.cloudAccount.hidden = !s;
     if (s) el.cloudEmailShown.textContent = s.email || '';
-    el.btnCloudLabel.textContent = s ? 'Sinhroniziraj' : 'Prijava';
+    el.btnCloudLabel.textContent = s ? displayName(s) : 'Prijava';
   }
 
-  Sync.onStatus = function (text, busy) {
-    el.cloudStatus.textContent = text || '';
+  /* Jasna povratna informacija po "Sinhroniziraj zdaj": zelena kljukica ob
+     uspehu, rdeč križec ob napaki — ne le nevtralno besedilo kot prej. */
+  Sync.onStatus = function (text, busy, kind) {
+    var prefix = kind === 'ok' ? '✓ ' : kind === 'error' ? '✕ ' : '';
+    el.cloudStatus.textContent = text ? (prefix + text) : '';
+    el.cloudStatus.className = 'muted' +
+      (kind === 'ok' ? ' status-ok' : kind === 'error' ? ' status-error' : '');
     el.btnCloud.classList[busy ? 'add' : 'remove']('busy-dot');
   };
 

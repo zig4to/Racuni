@@ -27,6 +27,8 @@ body{
 }
 h1,h2{margin:0;font-weight:650;letter-spacing:-.01em}
 .muted{color:var(--muted);font-size:.82rem}
+#cloudStatus.status-ok{color:var(--accent);font-weight:600}
+#cloudStatus.status-error{color:var(--danger);font-weight:600}
 
 /* ---------- glava ---------- */
 .topbar{
