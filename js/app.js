@@ -15,7 +15,7 @@
    'formNew', 'fTrgovina', 'fIzdelek', 'fZnamka', 'fModel', 'fDatum', 'fGarancija', 'btnFormNext',
    'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
    'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty',
-   'saveMetaStatus', 'btnPagePrev', 'btnPageNext', 'pageIndicator'
+   'saveMetaStatus', 'btnPagePrev', 'btnPageNext', 'pageIndicator', 'btnAddPageViewer'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -29,8 +29,9 @@
     meta: null,       // podatki iz obrazca (trgovina, izdelek, datum nakupa, garancija) — baza sledi kasneje
     pendingAction: null,  // 'camera' ali 'picker' — kateri zajem je obrazec odprl
     captureMethod: null,  // isto, a se ne pobrise ob zaprtju obrazca — "+" ga potrebuje za naslednjo stran
-    firstPage: null,      // prva stran vecstranskega racuna (postane rec.blob/thumb/w/h/size)
-    extraPages: []        // stran 2, 3, ... vecstranskega racuna (postane rec.extraPages)
+    firstPage: null,      // prva stran, zajeta v tej urejevalni seji (postane rec.blob/thumb/w/h/size pri novem racunu)
+    extraPages: [],        // dodatne strani, zajete v tej urejevalni seji
+    appendTo: null        // id obstojecega racuna, ce "+" v pregledovalniku dodaja strani vanj namesto v nov zapis
   };
 
   // ------------------------------------------------------------- pripomočki
@@ -210,8 +211,11 @@
     var res = Detect.findCorners(state.work);
     state.corners = res.corners;
     /* Ko gre za drugo (ali tretjo, ...) stran vecstranskega racuna, namig pove
-       katero — sicer ni jasno, da je prejsnja stran ze dodana in cakajoca. */
-    var prefix = state.firstPage ? 'Stran ' + (state.extraPages.length + 2) + ' — ' : '';
+       katero — sicer ni jasno, da je prejsnja stran ze dodana in cakajoca. Ce
+       gumb "+" dodaja k ze shranjenemu racunu, namig to izrecno pove. */
+    var prefix = state.appendTo
+      ? 'Nova stran za obstoječi račun — '
+      : (state.firstPage ? 'Stran ' + (state.extraPages.length + 2) + ' — ' : '');
     el.hint.textContent = prefix + (res.auto
       ? 'Račun zaznan. Povleci vogale, če izrez ni točen.'
       : 'Računa nisem zanesljivo prepoznal — nastavi vogale ročno.');
@@ -329,13 +333,23 @@
       Promise.all([canvasToBlob(canvas, JPEG_Q), canvasToBlob(thumb, 0.75)])
         .then(function (blobs) {
           var last = { blob: blobs[0], thumb: blobs[1], w: canvas.width, h: canvas.height, size: blobs[0].size };
-          /* Ce je bil kdaj kliknjen "+", je state.firstPage prva stran, last pa
-             zadnja — vmesne pa v state.extraPages. Sicer je last edina stran,
-             enako kot pri racunih od prej. */
-          var first = state.firstPage || last;
-          var extra = state.firstPage ? state.extraPages.concat([last]) : [];
+          /* Vse strani, zajete v tej urejevalni seji — ce "+" ni bil kliknjen,
+             je to samo ta ena stran, enako kot pri racunih od prej. */
+          var staged = state.firstPage ? state.extraPages.concat([last]) : [last];
+
+          /* Gumb "+" v pregledovalniku je nastavil appendTo — takrat staged
+             strani pripnemo k ze shranjenemu racunu namesto ustvarjanja novega. */
+          if (state.appendTo) {
+            return DB.get(state.appendTo).then(function (rec) {
+              if (!rec) throw new Error('Račun ne obstaja več.');
+              rec.extraPages = (rec.extraPages || []).concat(staged);
+              rec.synced = 0;   // sprememba mora se v oblak
+              return DB.add(rec).then(function () { return rec.id; });
+            });
+          }
 
           var id = Date.now();
+          var first = staged[0];
           /* Podatki iz obrazca, izpolnjenega pred zajemom. Če je bil preskočen
              (npr. zajem sprožen drugače), zapis nastane brez njih in jih je
              mogoče vpisati pozneje v pregledu. */
@@ -350,16 +364,20 @@
             kupljeno: m.datumNakupa || '',
             garancija_let: (m.garancijaLet === 0 || m.garancijaLet) ? m.garancijaLet : ''
           };
-          if (extra.length) rec.extraPages = extra;
-          return DB.add(rec);
+          if (staged.length > 1) rec.extraPages = staged.slice(1);
+          return DB.add(rec).then(function () { return id; });
         })
-        .then(function () {
+        .then(function (id) {
+          var reopenId = state.appendTo;
           state.work = null; state.corners = null;
-          state.firstPage = null; state.extraPages = []; state.captureMethod = null;
+          state.firstPage = null; state.extraPages = []; state.captureMethod = null; state.appendTo = null;
           resetForm();
           showGallery();
           if (window.Sync) Sync.afterSave();   // v ozadju, vmesnika ne zadrzuje
-          return renderGallery();
+          return renderGallery().then(function () {
+            // Nazaj v pregledovalnik istega racuna, da nova stran takoj vidna.
+            if (reopenId) openViewer(reopenId);
+          });
         })
         .catch(function (err) {
           alert('Shranjevanje ni uspelo: ' + (err.message || err));
@@ -518,6 +536,17 @@
     state.current = null;
   }
 
+  /* "+" v pregledovalniku — doda stran ze shranjenemu racunu (v nasprotju z
+     btnAddPage, ki dodaja strani racunu, ki se ni bil nikoli shranjen). Zajem
+     gre naravnost v kamero; ce uporabnik zeli izbrati iz galerije, lahko med
+     obrezovanjem zamenja z "Prekliči" ali kasneje znova sprozi z "+". */
+  function addPageToViewer() {
+    if (!state.current) return;
+    state.appendTo = state.current.id;
+    closeViewer();
+    el.inputCamera.click();
+  }
+
   function download() {
     if (!state.current) return;
     var pages = pagesOf(state.current), p = pages[state.pageIndex];
@@ -672,11 +701,14 @@
   el.btnCrop.addEventListener('click', cropAndSave);
   el.btnAddPage.addEventListener('click', addPage);
   el.btnCancel.addEventListener('click', function () {
+    var reopenId = state.appendTo;
     state.work = null; state.corners = null;
-    state.firstPage = null; state.extraPages = []; state.captureMethod = null;
+    state.firstPage = null; state.extraPages = []; state.captureMethod = null; state.appendTo = null;
     showGallery();
+    if (reopenId) openViewer(reopenId);   // nazaj v pregledovalnik, ne v golo galerijo
   });
   el.btnClose.addEventListener('click', closeViewer);
+  el.btnAddPageViewer.addEventListener('click', addPageToViewer);
   el.btnPagePrev.addEventListener('click', prevPage);
   el.btnPageNext.addEventListener('click', nextPage);
   el.btnDownload.addEventListener('click', download);
