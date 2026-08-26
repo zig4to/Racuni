@@ -543,8 +543,13 @@
   function addPageToViewer() {
     if (!state.current) return;
     state.appendTo = state.current.id;
-    closeViewer();
+    /* Najprej sprozi vhod za kamero - dokler je klik se "svez" (znotraj iste
+       sinhronizirane uporabnikove geste), sele nato zapri pregledovalnik.
+       Obratni vrstni red je na nekaterih mobilnih brskalnikih povzrocil, da
+       je skrivanje pregledovalnika tik pred klicem izniclo dovoljenje za
+       odprtje datotecnega/kamera izbirnika, zato gumb ni deloval. */
     el.inputCamera.click();
+    closeViewer();
   }
 
   function download() {
