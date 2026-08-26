@@ -6,7 +6,7 @@
   if (!window.Sync) return;
 
   var el = {};
-  ['btnCloud', 'cloud', 'btnCloudClose', 'cloudStatus', 'cloudLogin', 'cloudAccount',
+  ['btnCloud', 'btnCloudLabel', 'cloud', 'btnCloudClose', 'cloudStatus', 'cloudLogin', 'cloudAccount',
    'cloudEmail', 'cloudPass', 'cloudErr', 'btnCloudLogin', 'cloudEmailShown',
    'btnCloudSync', 'btnCloudLogout'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
@@ -28,7 +28,7 @@
     el.cloudLogin.hidden = !!s;
     el.cloudAccount.hidden = !s;
     if (s) el.cloudEmailShown.textContent = s.email || '';
-    el.btnCloud.textContent = s ? '☁ Sinhroniziraj' : '☁ Prijava';
+    el.btnCloudLabel.textContent = s ? 'Sinhroniziraj' : 'Prijava';
   }
 
   Sync.onStatus = function (text, busy) {
