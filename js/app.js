@@ -11,7 +11,9 @@
   ['inputCamera', 'inputPicker', 'viewGallery', 'viewEdit', 'grid', 'emptyState',
    'preview', 'overlay', 'shade', 'quad', 'stage', 'hint', 'enhance', 'btnRotate',
    'btnReset', 'btnCancel', 'btnCrop', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
-   'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnInstall'
+   'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnInstall',
+   'formNew', 'fTrgovina', 'fIzdelek', 'fDatum', 'fGarancija', 'btnFormNext',
+   'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -20,7 +22,9 @@
     work: null,       // canvas z izvorno (pomanjšano) fotografijo
     corners: null,    // 4 vogali v koordinatah work canvasa
     current: null,    // odprt zapis v pregledovalniku
-    objectUrl: null
+    objectUrl: null,
+    meta: null,       // podatki iz obrazca (trgovina, izdelek, datum nakupa, garancija) — baza sledi kasneje
+    pendingAction: null   // 'camera' ali 'picker' — kateri zajem je obrazec odprl
   };
 
   // ------------------------------------------------------------- pripomočki
@@ -202,6 +206,7 @@
         })
         .then(function () {
           state.work = null; state.corners = null;
+          resetForm();
           showGallery();
           return renderGallery();
         })
@@ -307,6 +312,48 @@
     DB.remove(id).then(renderGallery);
   }
 
+  // -------------------------------------------------------------- obrazec (nov račun)
+  function formFilled() {
+    return el.fTrgovina.value.trim() !== '' && el.fIzdelek.value.trim() !== '';
+  }
+
+  function updateFormNext() {
+    el.btnFormNext.disabled = !formFilled();
+  }
+
+  function openForm(action) {
+    state.pendingAction = action;
+    el.captureRow.hidden = true;
+    el.formNew.hidden = false;
+  }
+
+  function closeForm() {
+    state.pendingAction = null;
+    el.formNew.hidden = true;
+    el.captureRow.hidden = false;
+  }
+
+  function confirmForm() {
+    state.meta = {
+      trgovina: el.fTrgovina.value.trim(),
+      izdelek: el.fIzdelek.value.trim(),
+      datumNakupa: el.fDatum.value || null,
+      garancijaLet: el.fGarancija.value ? Number(el.fGarancija.value) : 0
+    };
+    var action = state.pendingAction;
+    closeForm();
+    if (action === 'camera') el.inputCamera.click();
+    else if (action === 'picker') el.inputPicker.click();
+  }
+
+  function resetForm() {
+    el.fTrgovina.value = ''; el.fIzdelek.value = '';
+    el.fDatum.value = ''; el.fGarancija.value = '';
+    state.meta = null;
+    updateFormNext();
+    closeForm();
+  }
+
   // ------------------------------------------------------------- preklop pogledov
   function showEdit() {
     el.viewGallery.hidden = true;
@@ -325,6 +372,13 @@
     e.target.value = '';   // isto sliko je mogoče izbrati znova
     handleFile(f);
   }
+
+  el.fTrgovina.addEventListener('input', updateFormNext);
+  el.fIzdelek.addEventListener('input', updateFormNext);
+  el.btnCamera.addEventListener('click', function () { openForm('camera'); });
+  el.btnPicker.addEventListener('click', function () { openForm('picker'); });
+  el.btnFormNext.addEventListener('click', confirmForm);
+  el.btnFormCancel.addEventListener('click', resetForm);
 
   el.inputCamera.addEventListener('change', onPick);
   el.inputPicker.addEventListener('change', onPick);

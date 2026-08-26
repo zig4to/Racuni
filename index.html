@@ -33,15 +33,45 @@
 <main>
   <!-- ================= GALERIJA ================= -->
   <section id="viewGallery">
-    <div class="capture">
-      <label class="btn btn-primary">
-        📷 Slikaj račun
-        <input id="inputCamera" type="file" accept="image/*" capture="environment" hidden>
-      </label>
-      <label class="btn">
-        🖼️ Izberi sliko
-        <input id="inputPicker" type="file" accept="image/*" hidden>
-      </label>
+    <div id="captureRow" class="capture">
+      <button id="btnCamera" type="button" class="btn btn-primary">📷 Slikaj račun</button>
+      <button id="btnPicker" type="button" class="btn">🖼️ Izberi sliko</button>
+    </div>
+    <input id="inputCamera" type="file" accept="image/*" capture="environment" hidden>
+    <input id="inputPicker" type="file" accept="image/*" hidden>
+
+    <div id="formNew" class="form-new" hidden>
+      <h2 class="section-title">Nov račun</h2>
+      <div class="field">
+        <label for="fTrgovina">Trgovina</label>
+        <input id="fTrgovina" type="text" placeholder="npr. Mercator" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="fIzdelek">Izdelek</label>
+        <input id="fIzdelek" type="text" placeholder="npr. Pralni stroj" autocomplete="off">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="fDatum">Datum nakupa</label>
+          <input id="fDatum" type="date">
+        </div>
+        <div class="field">
+          <label for="fGarancija">Garancija (let)</label>
+          <input id="fGarancija" type="number" min="0" step="1" inputmode="numeric" placeholder="npr. 2">
+        </div>
+      </div>
+      <div class="actions">
+        <button id="btnFormCancel" type="button" class="btn">Prekliči</button>
+        <button id="btnFormNext" type="button" class="btn btn-primary form-next" disabled>Naprej →</button>
+      </div>
+    </div>
+
+    <div class="search-bar">
+      <svg class="search-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
+        <line x1="21" y1="21" x2="16.2" y2="16.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <input id="searchInput" type="search" class="search-input" placeholder="Išči po dobavitelju, znesku, datumu …" autocomplete="off" enterkeyhint="search">
     </div>
 
     <hr class="divider">
