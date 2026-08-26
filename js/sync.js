@@ -197,6 +197,8 @@ window.Sync = (function () {
             thumb_path: objectPath(rec.id, true),
             trgovina: rec.trgovina || null,
             izdelek: rec.izdelek || null,
+            znamka: rec.znamka || null,
+            model: rec.model || null,
             kupljeno: rec.kupljeno || null,
             garancija_let: (rec.garancija_let === 0 || rec.garancija_let) ? rec.garancija_let : null
           })
@@ -223,6 +225,8 @@ window.Sync = (function () {
     return {
       trgovina: row.trgovina || '',
       izdelek: row.izdelek || '',
+      znamka: row.znamka || '',
+      model: row.model || '',
       kupljeno: row.kupljeno || '',
       garancija_let: (row.garancija_let === null || row.garancija_let === undefined)
         ? '' : Number(row.garancija_let)
@@ -232,6 +236,8 @@ window.Sync = (function () {
   function sameMeta(a, b) {
     return (a.trgovina || '') === (b.trgovina || '') &&
            (a.izdelek || '') === (b.izdelek || '') &&
+           (a.znamka || '') === (b.znamka || '') &&
+           (a.model || '') === (b.model || '') &&
            (a.kupljeno || '') === (b.kupljeno || '') &&
            String(a.garancija_let === undefined ? '' : a.garancija_let) ===
            String(b.garancija_let === undefined ? '' : b.garancija_let);
@@ -241,7 +247,7 @@ window.Sync = (function () {
     var mine = {}, gone = tombstones();
     local.forEach(function (r) { mine[r.id] = r; });
 
-    return rest('racuni?select=id,w,h,size,path,thumb_path,trgovina,izdelek,' +
+    return rest('racuni?select=id,w,h,size,path,thumb_path,trgovina,izdelek,znamka,model,' +
                 'kupljeno,garancija_let&order=id.desc')
       .then(function (res) {
         if (!res.ok) return fail(res, 'Branje seznama ni uspelo');
@@ -266,6 +272,8 @@ window.Sync = (function () {
           var rec = mine[row.id], m = meta(row);
           rec.trgovina = m.trgovina;
           rec.izdelek = m.izdelek;
+          rec.znamka = m.znamka;
+          rec.model = m.model;
           rec.kupljeno = m.kupljeno;
           rec.garancija_let = m.garancija_let;
           return DB.add(rec);
@@ -280,6 +288,7 @@ window.Sync = (function () {
                   blob: blobs[0], thumb: blobs[1],
                   w: row.w, h: row.h, size: row.size, synced: 1,
                   trgovina: m.trgovina, izdelek: m.izdelek,
+                  znamka: m.znamka, model: m.model,
                   kupljeno: m.kupljeno, garancija_let: m.garancija_let
                 });
               });

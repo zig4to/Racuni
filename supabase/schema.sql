@@ -17,6 +17,8 @@ create table if not exists public.racuni (
   -- takoj ob nakupu in dopolniti pozneje.
   trgovina      text,                         -- kje je bilo kupljeno
   izdelek       text,                         -- kaj je bilo kupljeno
+  znamka        text,                         -- znamka izdelka
+  model         text,                         -- model izdelka
   kupljeno      date,                         -- datum nakupa
   garancija_let numeric(4,1)                  -- leta garancije (dopušča 0,5)
 );
@@ -25,15 +27,17 @@ create table if not exists public.racuni (
 -- dodani — "create table if not exists" zgoraj obstoječe tabele ne spremeni.
 alter table public.racuni add column if not exists trgovina      text;
 alter table public.racuni add column if not exists izdelek       text;
+alter table public.racuni add column if not exists znamka        text;
+alter table public.racuni add column if not exists model         text;
 alter table public.racuni add column if not exists kupljeno      date;
 alter table public.racuni add column if not exists garancija_let numeric(4,1);
 
 create index if not exists racuni_user_created_idx
   on public.racuni (user_id, created desc);
 
--- Iskanje po trgovini in izdelku, ko se jih nabere veliko.
+-- Iskanje po trgovini, izdelku, znamki in modelu, ko se jih nabere veliko.
 create index if not exists racuni_iskanje_idx
-  on public.racuni (user_id, trgovina, izdelek);
+  on public.racuni (user_id, trgovina, izdelek, znamka, model);
 
 alter table public.racuni enable row level security;
 

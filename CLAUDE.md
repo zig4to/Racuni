@@ -75,16 +75,16 @@ fall back to `defaultCorners`; that is by design, not a bug to fix.
 
 ### DB records
 
-`{ id, created, blob (JPG), thumb (JPG), w, h, size, synced, trgovina, izdelek, kupljeno,
-garancija_let }`, where `id === created === Date.now()` and doubles as the primary key and the
-gallery sort key.
+`{ id, created, blob (JPG), thumb (JPG), w, h, size, synced, trgovina, izdelek, znamka, model,
+kupljeno, garancija_let }`, where `id === created === Date.now()` and doubles as the primary key
+and the gallery sort key.
 
-The last five are additive and optional — IndexedDB is schemaless per record, so receipts saved
+The last seven are additive and optional — IndexedDB is schemaless per record, so receipts saved
 before those fields existed simply lack them and render blank. That is why `VERSION` in
 `js/db.js` is still 1. Only adding an *index* would require bumping it and handling
 `onupgradeneeded`.
 
-`synced` drives sync: `0`/absent means pending upload. Editing the four purchase fields sets it
+`synced` drives sync: `0`/absent means pending upload. Editing the six purchase fields sets it
 back to `0`, and `sync.js` upserts with `Prefer: resolution=merge-duplicates` — which is why the
 `racuni` table needs an UPDATE grant and policy, not just INSERT.
 

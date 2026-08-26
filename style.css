@@ -48,6 +48,12 @@ h1,h2{margin:0;font-weight:650;letter-spacing:-.01em}
 }
 main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 
+/* ---------- noga ---------- */
+.footer{
+  text-align:center;padding:4px 18px calc(22px + env(safe-area-inset-bottom));
+  max-width:1000px;margin:0 auto;
+}
+
 /* ---------- gumbi ---------- */
 .btn{
   display:inline-flex;align-items:center;justify-content:center;gap:8px;

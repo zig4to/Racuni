@@ -12,9 +12,9 @@
    'preview', 'overlay', 'shade', 'quad', 'stage', 'hint', 'enhance', 'btnRotate',
    'btnReset', 'btnCancel', 'btnCrop', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
    'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnInstall',
-   'formNew', 'fTrgovina', 'fIzdelek', 'fDatum', 'fGarancija', 'btnFormNext',
+   'formNew', 'fTrgovina', 'fIzdelek', 'fZnamka', 'fModel', 'fDatum', 'fGarancija', 'btnFormNext',
    'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
-   'vTrgovina', 'vIzdelek', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty'
+   'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -55,7 +55,10 @@
   // ------------------------------------------------------- podatki o nakupu
   /* Podatke o nakupu vpišeš pred zajemom (obrazec "Nov račun"), popraviš pa jih
      lahko pozneje v pregledu — zato ista polja obstajajo na dveh mestih. */
-  var viewFields = { shop: el.vTrgovina, item: el.vIzdelek, date: el.vDatum, warranty: el.vGarancija };
+  var viewFields = {
+    shop: el.vTrgovina, item: el.vIzdelek, brand: el.vZnamka, model: el.vModel,
+    date: el.vDatum, warranty: el.vGarancija
+  };
 
   function today() {
     var d = new Date();
@@ -63,12 +66,14 @@
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate());
   }
 
-  /* Stiri polja -> objekt, kakrsen gre v IndexedDB in naprej v oblak. */
+  /* Sest polj -> objekt, kakrsen gre v IndexedDB in naprej v oblak. */
   function readFields(f) {
     var years = parseFloat(f.warranty.value);
     return {
       trgovina: (f.shop.value || '').trim(),
       izdelek: (f.item.value || '').trim(),
+      znamka: (f.brand.value || '').trim(),
+      model: (f.model.value || '').trim(),
       kupljeno: f.date.value || '',
       garancija_let: isNaN(years) ? '' : years
     };
@@ -77,6 +82,8 @@
   function writeFields(f, rec) {
     f.shop.value = rec.trgovina || '';
     f.item.value = rec.izdelek || '';
+    f.brand.value = rec.znamka || '';
+    f.model.value = rec.model || '';
     f.date.value = rec.kupljeno || '';
     f.warranty.value = (rec.garancija_let === 0 || rec.garancija_let) ? rec.garancija_let : '';
   }
@@ -277,6 +284,8 @@
             w: canvas.width, h: canvas.height, size: blobs[0].size,
             trgovina: m.trgovina || '',
             izdelek: m.izdelek || '',
+            znamka: m.znamka || '',
+            model: m.model || '',
             kupljeno: m.datumNakupa || '',
             garancija_let: (m.garancijaLet === 0 || m.garancijaLet) ? m.garancijaLet : ''
           });
@@ -296,10 +305,10 @@
   }
 
   // --------------------------------------------------------------- galerija
-  /* Išče po trgovini, izdelku in obeh datumih — nakupa in shranjevanja. */
+  /* Išče po trgovini, izdelku, znamki, modelu in obeh datumih — nakupa in shranjevanja. */
   function matchesSearch(rec, q) {
     if (!q) return true;
-    return [rec.trgovina || '', rec.izdelek || '', rec.kupljeno || '', fmtDate(rec.created)]
+    return [rec.trgovina || '', rec.izdelek || '', rec.znamka || '', rec.model || '', rec.kupljeno || '', fmtDate(rec.created)]
       .join(' ').toLowerCase().indexOf(q) >= 0;
   }
 
@@ -426,6 +435,8 @@
     var rec = state.current, f = readFields(viewFields);
     rec.trgovina = f.trgovina;
     rec.izdelek = f.izdelek;
+    rec.znamka = f.znamka;
+    rec.model = f.model;
     rec.kupljeno = f.kupljeno;
     rec.garancija_let = f.garancija_let;
     rec.synced = 0;                       // sprememba mora se v oblak
@@ -478,6 +489,8 @@
     state.meta = {
       trgovina: el.fTrgovina.value.trim(),
       izdelek: el.fIzdelek.value.trim(),
+      znamka: el.fZnamka.value.trim(),
+      model: el.fModel.value.trim(),
       datumNakupa: el.fDatum.value || null,
       garancijaLet: el.fGarancija.value ? Number(el.fGarancija.value) : 0
     };
@@ -489,6 +502,7 @@
 
   function resetForm() {
     el.fTrgovina.value = ''; el.fIzdelek.value = '';
+    el.fZnamka.value = ''; el.fModel.value = '';
     el.fDatum.value = ''; el.fGarancija.value = '';
     state.meta = null;
     updateFormNext();

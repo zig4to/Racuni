@@ -27,7 +27,6 @@
   <div class="topbar-right">
     <button id="btnInstall" class="btn btn-sm btn-install" hidden>⬇ Namesti</button>
     <button id="btnCloud" class="btn btn-sm" hidden>☁ Prijava</button>
-    <span id="storageInfo" class="muted"></span>
   </div>
 </header>
 
@@ -66,6 +65,16 @@
       </div>
       <div class="field-row">
         <div class="field">
+          <label for="fZnamka">Znamka</label>
+          <input id="fZnamka" type="text" placeholder="npr. Bosch" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="fModel">Model</label>
+          <input id="fModel" type="text" placeholder="npr. Serie 6" autocomplete="off">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
           <label for="fDatum">Datum nakupa</label>
           <input id="fDatum" type="date">
         </div>
@@ -85,7 +94,7 @@
         <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2"/>
         <line x1="21" y1="21" x2="16.2" y2="16.2" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
-      <input id="searchInput" type="search" class="search-input" placeholder="Išči po trgovini, izdelku ali datumu …" autocomplete="off" enterkeyhint="search">
+      <input id="searchInput" type="search" class="search-input" placeholder="Išči po trgovini, izdelku, znamki, modelu ali datumu …" autocomplete="off" enterkeyhint="search">
     </div>
 
     <hr class="divider">
@@ -138,6 +147,10 @@
   </section>
 </main>
 
+<footer class="footer">
+  <span id="storageInfo" class="muted"></span>
+</footer>
+
 <!-- ================= PREGLED SHRANJENEGA ================= -->
 <div id="viewer" class="viewer" hidden>
   <div class="viewer-bar">
@@ -155,6 +168,16 @@
     <div class="field">
       <label for="vIzdelek">Izdelek</label>
       <input id="vIzdelek" type="text" placeholder="npr. Pralni stroj" autocomplete="off">
+    </div>
+    <div class="field-row">
+      <div class="field">
+        <label for="vZnamka">Znamka</label>
+        <input id="vZnamka" type="text" placeholder="npr. Bosch" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="vModel">Model</label>
+        <input id="vModel" type="text" placeholder="npr. Serie 6" autocomplete="off">
+      </div>
     </div>
     <div class="field-row">
       <div class="field">
