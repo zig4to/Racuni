@@ -34,8 +34,21 @@
   <!-- ================= GALERIJA ================= -->
   <section id="viewGallery">
     <div id="captureRow" class="capture">
-      <button id="btnCamera" type="button" class="btn btn-primary">📷 Slikaj račun</button>
-      <button id="btnPicker" type="button" class="btn">🖼️ Izberi sliko</button>
+      <button id="btnCamera" type="button" class="btn btn-primary">
+        <svg class="btn-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <path d="M4 8h3l1.6-2.2a1 1 0 0 1 .8-.4h5.2a1 1 0 0 1 .8.4L17 8h3a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+          <circle cx="12" cy="13.3" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        Slikaj račun
+      </button>
+      <button id="btnPicker" type="button" class="btn">
+        <svg class="btn-icon" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+          <rect x="3" y="4" width="18" height="14" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/>
+          <circle cx="8.5" cy="9.5" r="1.5" fill="currentColor" stroke="none"/>
+          <path d="M4.5 16 9 11.5a1.5 1.5 0 0 1 2 0l4 4M13.5 13.5 15.5 11.5a1.5 1.5 0 0 1 2 0L21 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Izberi sliko
+      </button>
     </div>
     <input id="inputCamera" type="file" accept="image/*" capture="environment" hidden>
     <input id="inputPicker" type="file" accept="image/*" hidden>
