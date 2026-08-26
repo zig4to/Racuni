@@ -10,12 +10,12 @@
   var el = {};
   ['inputCamera', 'inputPicker', 'viewGallery', 'viewEdit', 'grid', 'emptyState',
    'preview', 'overlay', 'shade', 'quad', 'stage', 'hint', 'enhance', 'btnRotate',
-   'btnReset', 'btnCancel', 'btnCrop', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
+   'btnReset', 'btnCancel', 'btnCrop', 'btnAddPage', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
    'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnRefresh',
    'formNew', 'fTrgovina', 'fIzdelek', 'fZnamka', 'fModel', 'fDatum', 'fGarancija', 'btnFormNext',
    'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
    'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty',
-   'saveMetaStatus'
+   'saveMetaStatus', 'btnPagePrev', 'btnPageNext', 'pageIndicator'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -24,9 +24,13 @@
     work: null,       // canvas z izvorno (pomanjšano) fotografijo
     corners: null,    // 4 vogali v koordinatah work canvasa
     current: null,    // odprt zapis v pregledovalniku
+    pageIndex: 0,     // katera stran trenutno odprtega racuna je prikazana
     objectUrl: null,
     meta: null,       // podatki iz obrazca (trgovina, izdelek, datum nakupa, garancija) — baza sledi kasneje
-    pendingAction: null   // 'camera' ali 'picker' — kateri zajem je obrazec odprl
+    pendingAction: null,  // 'camera' ali 'picker' — kateri zajem je obrazec odprl
+    captureMethod: null,  // isto, a se ne pobrise ob zaprtju obrazca — "+" ga potrebuje za naslednjo stran
+    firstPage: null,      // prva stran vecstranskega racuna (postane rec.blob/thumb/w/h/size)
+    extraPages: []        // stran 2, 3, ... vecstranskega racuna (postane rec.extraPages)
   };
 
   // ------------------------------------------------------------- pripomočki
@@ -46,11 +50,30 @@
                            : Math.round(bytes / 1024) + ' kB';
   }
 
-  function fileName(ts) {
+  /* page: 2, 3, ... za vecstranske racune (prva stran brez pripone, kot doslej). */
+  function fileName(ts, page) {
     var d = new Date(ts);
     function p(n) { return String(n).padStart(2, '0'); }
     return 'racun_' + d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) +
-      '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) + '.jpg';
+      '_' + p(d.getHours()) + p(d.getMinutes()) + p(d.getSeconds()) +
+      (page ? '_str' + page : '') + '.jpg';
+  }
+
+  /* Prva stran je vedno rec.blob/thumb/w/h/size (tako kot pri enostranskih
+     racunih pred to funkcijo) — dodatne strani gredo v rec.extraPages. Tako
+     enostranski racuni ostanejo bit-za-bit enaki starim zapisom. */
+  function pagesOf(rec) {
+    var first = { blob: rec.blob, thumb: rec.thumb, w: rec.w, h: rec.h, size: rec.size };
+    return (rec.extraPages && rec.extraPages.length) ? [first].concat(rec.extraPages) : [first];
+  }
+
+  function makeThumb(canvas) {
+    var thumb = document.createElement('canvas');
+    var tk = Math.min(1, THUMB_W / canvas.width);
+    thumb.width = Math.round(canvas.width * tk);
+    thumb.height = Math.round(canvas.height * tk);
+    thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
+    return thumb;
   }
 
   // ------------------------------------------------------- podatki o nakupu
@@ -186,9 +209,12 @@
   function runDetection() {
     var res = Detect.findCorners(state.work);
     state.corners = res.corners;
-    el.hint.textContent = res.auto
+    /* Ko gre za drugo (ali tretjo, ...) stran vecstranskega racuna, namig pove
+       katero — sicer ni jasno, da je prejsnja stran ze dodana in cakajoca. */
+    var prefix = state.firstPage ? 'Stran ' + (state.extraPages.length + 2) + ' — ' : '';
+    el.hint.textContent = prefix + (res.auto
       ? 'Račun zaznan. Povleci vogale, če izrez ni točen.'
-      : 'Računa nisem zanesljivo prepoznal — nastavi vogale ročno.';
+      : 'Računa nisem zanesljivo prepoznal — nastavi vogale ročno.');
     drawPreview();
   }
 
@@ -255,6 +281,37 @@
     runDetection();
   }
 
+  /* "+" v zaslonu za obrezovanje: trenutno stran obreze in jo doda k racunu,
+     nato takoj znova sprozi isti zajem (kamera/izbirnik) za naslednjo stran.
+     Racun se shrani sele ob koncnem "Obreži in shrani". */
+  function addPage() {
+    busy(true, 'Dodajam stran…');
+    setTimeout(function () {
+      var canvas;
+      try {
+        canvas = Detect.crop(state.work, state.corners, { enhance: el.enhance.checked });
+      } catch (err) {
+        busy(false);
+        alert(err.message);
+        return;
+      }
+      var thumb = makeThumb(canvas);
+      Promise.all([canvasToBlob(canvas, JPEG_Q), canvasToBlob(thumb, 0.75)])
+        .then(function (blobs) {
+          var page = { blob: blobs[0], thumb: blobs[1], w: canvas.width, h: canvas.height, size: blobs[0].size };
+          if (!state.firstPage) state.firstPage = page;
+          else state.extraPages.push(page);
+          state.work = null; state.corners = null;
+          if (state.captureMethod === 'picker') el.inputPicker.click();
+          else el.inputCamera.click();
+        })
+        .catch(function (err) {
+          alert('Dodajanje strani ni uspelo: ' + (err.message || err));
+        })
+        .then(function () { busy(false); });
+    }, 30);
+  }
+
   function cropAndSave() {
     busy(true, 'Obrezujem in shranjujem…');
     setTimeout(function () {
@@ -267,32 +324,38 @@
         return;
       }
 
-      var thumb = document.createElement('canvas');
-      var tk = Math.min(1, THUMB_W / canvas.width);
-      thumb.width = Math.round(canvas.width * tk);
-      thumb.height = Math.round(canvas.height * tk);
-      thumb.getContext('2d').drawImage(canvas, 0, 0, thumb.width, thumb.height);
+      var thumb = makeThumb(canvas);
 
       Promise.all([canvasToBlob(canvas, JPEG_Q), canvasToBlob(thumb, 0.75)])
         .then(function (blobs) {
+          var last = { blob: blobs[0], thumb: blobs[1], w: canvas.width, h: canvas.height, size: blobs[0].size };
+          /* Ce je bil kdaj kliknjen "+", je state.firstPage prva stran, last pa
+             zadnja — vmesne pa v state.extraPages. Sicer je last edina stran,
+             enako kot pri racunih od prej. */
+          var first = state.firstPage || last;
+          var extra = state.firstPage ? state.extraPages.concat([last]) : [];
+
           var id = Date.now();
           /* Podatki iz obrazca, izpolnjenega pred zajemom. Če je bil preskočen
              (npr. zajem sprožen drugače), zapis nastane brez njih in jih je
              mogoče vpisati pozneje v pregledu. */
           var m = state.meta || {};
-          return DB.add({
-            id: id, created: id, blob: blobs[0], thumb: blobs[1],
-            w: canvas.width, h: canvas.height, size: blobs[0].size,
+          var rec = {
+            id: id, created: id, blob: first.blob, thumb: first.thumb,
+            w: first.w, h: first.h, size: first.size,
             trgovina: m.trgovina || '',
             izdelek: m.izdelek || '',
             znamka: m.znamka || '',
             model: m.model || '',
             kupljeno: m.datumNakupa || '',
             garancija_let: (m.garancijaLet === 0 || m.garancijaLet) ? m.garancijaLet : ''
-          });
+          };
+          if (extra.length) rec.extraPages = extra;
+          return DB.add(rec);
         })
         .then(function () {
           state.work = null; state.corners = null;
+          state.firstPage = null; state.extraPages = []; state.captureMethod = null;
           resetForm();
           showGallery();
           if (window.Sync) Sync.afterSave();   // v ozadju, vmesnika ne zadrzuje
@@ -368,6 +431,14 @@
 
         card.appendChild(date);
 
+        // Vecstranski racun — kratka znacka pove, koliko strani je zdruzenih.
+        if (rec.extraPages && rec.extraPages.length) {
+          var pages = document.createElement('div');
+          pages.className = 'card-pages';
+          pages.textContent = (rec.extraPages.length + 1) + ' str.';
+          card.appendChild(pages);
+        }
+
         card.addEventListener('click', function () { openViewer(rec.id); });
         el.grid.appendChild(card);
       });
@@ -387,7 +458,10 @@
   }
 
   function updateStorageInfo(items) {
-    var total = items.reduce(function (s, r) { return s + (r.size || 0); }, 0);
+    var total = items.reduce(function (s, r) {
+      var extra = (r.extraPages || []).reduce(function (s2, p) { return s2 + (p.size || 0); }, 0);
+      return s + (r.size || 0) + extra;
+    }, 0);
     el.storageInfo.textContent = items.length
       ? plural(items.length) + ' · ' + fmtSize(total)
       : '';
@@ -398,17 +472,43 @@
     DB.get(id).then(function (rec) {
       if (!rec) return;
       state.current = rec;
-      if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
-      state.objectUrl = URL.createObjectURL(rec.blob);
-      el.viewerImg.src = state.objectUrl;
-      el.viewerMeta.textContent = fmtDate(rec.created) + ' · ' + rec.w + '×' + rec.h + ' · ' + fmtSize(rec.size);
+      state.pageIndex = 0;
+      showViewerPage();
       writeFields(viewFields, rec);
       renderWarranty(rec);
+      var pages = pagesOf(rec);
       el.btnShare.hidden = !(navigator.canShare && navigator.canShare({
-        files: [new File([rec.blob], 'test.jpg', { type: 'image/jpeg' })]
+        files: pages.map(function (p) { return new File([p.blob], 'test.jpg', { type: 'image/jpeg' }); })
       }));
       el.viewer.hidden = false;
     });
+  }
+
+  /* Prikaze trenutno stran (state.pageIndex) vecstranskega racuna in po
+     potrebi pokaze/skrije puscici ter stevec — pri enostranskih racunih
+     ostane skrito, tako kot pred podporo za vec strani. */
+  function showViewerPage() {
+    var pages = pagesOf(state.current), p = pages[state.pageIndex];
+    if (state.objectUrl) URL.revokeObjectURL(state.objectUrl);
+    state.objectUrl = URL.createObjectURL(p.blob);
+    el.viewerImg.src = state.objectUrl;
+    el.viewerMeta.textContent = fmtDate(state.current.created) + ' · ' + p.w + '×' + p.h + ' · ' + fmtSize(p.size);
+
+    var multi = pages.length > 1;
+    el.btnPagePrev.hidden = el.btnPageNext.hidden = el.pageIndicator.hidden = !multi;
+    if (multi) {
+      el.pageIndicator.textContent = (state.pageIndex + 1) + ' / ' + pages.length;
+      el.btnPagePrev.disabled = state.pageIndex === 0;
+      el.btnPageNext.disabled = state.pageIndex === pages.length - 1;
+    }
+  }
+
+  function prevPage() {
+    if (state.pageIndex > 0) { state.pageIndex--; showViewerPage(); }
+  }
+
+  function nextPage() {
+    if (state.pageIndex < pagesOf(state.current).length - 1) { state.pageIndex++; showViewerPage(); }
   }
 
   function closeViewer() {
@@ -420,10 +520,11 @@
 
   function download() {
     if (!state.current) return;
-    var url = URL.createObjectURL(state.current.blob);
+    var pages = pagesOf(state.current), p = pages[state.pageIndex];
+    var url = URL.createObjectURL(p.blob);
     var a = document.createElement('a');
     a.href = url;
-    a.download = fileName(state.current.created);
+    a.download = fileName(state.current.created, pages.length > 1 ? state.pageIndex + 1 : null);
     document.body.appendChild(a);
     a.click();
     a.remove();
@@ -432,8 +533,11 @@
 
   function share() {
     if (!state.current) return;
-    var file = new File([state.current.blob], fileName(state.current.created), { type: 'image/jpeg' });
-    navigator.share({ files: [file], title: 'Račun' }).catch(function () { /* preklic */ });
+    var pages = pagesOf(state.current);
+    var files = pages.map(function (p, i) {
+      return new File([p.blob], fileName(state.current.created, pages.length > 1 ? i + 1 : null), { type: 'image/jpeg' });
+    });
+    navigator.share({ files: files, title: 'Račun' }).catch(function () { /* preklic */ });
   }
 
   /* Podatke se da vpisati ali popraviti tudi pozneje — racune, ki so bili
@@ -518,6 +622,7 @@
       garancijaLet: el.fGarancija.value ? Number(el.fGarancija.value) : 0
     };
     var action = state.pendingAction;
+    state.captureMethod = action;   // "+" v urejanju potrebuje to za naslednjo stran
     closeForm();
     if (action === 'camera') el.inputCamera.click();
     else if (action === 'picker') el.inputPicker.click();
@@ -528,6 +633,7 @@
     el.fZnamka.value = ''; el.fModel.value = '';
     el.fDatum.value = ''; el.fGarancija.value = '';
     state.meta = null;
+    state.captureMethod = null;
     updateFormNext();
     closeForm();
   }
@@ -564,11 +670,15 @@
   el.btnRotate.addEventListener('click', rotate90);
   el.btnReset.addEventListener('click', runDetection);
   el.btnCrop.addEventListener('click', cropAndSave);
+  el.btnAddPage.addEventListener('click', addPage);
   el.btnCancel.addEventListener('click', function () {
     state.work = null; state.corners = null;
+    state.firstPage = null; state.extraPages = []; state.captureMethod = null;
     showGallery();
   });
   el.btnClose.addEventListener('click', closeViewer);
+  el.btnPagePrev.addEventListener('click', prevPage);
+  el.btnPageNext.addEventListener('click', nextPage);
   el.btnDownload.addEventListener('click', download);
   el.btnShare.addEventListener('click', share);
   el.btnDelete.addEventListener('click', removeCurrent);

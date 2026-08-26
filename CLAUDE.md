@@ -75,18 +75,28 @@ fall back to `defaultCorners`; that is by design, not a bug to fix.
 
 ### DB records
 
-`{ id, created, blob (JPG), thumb (JPG), w, h, size, synced, trgovina, izdelek, znamka, model,
-kupljeno, garancija_let }`, where `id === created === Date.now()` and doubles as the primary key
-and the gallery sort key.
+`{ id, created, blob (JPG), thumb (JPG), w, h, size, extraPages, synced, trgovina, izdelek,
+znamka, model, kupljeno, garancija_let }`, where `id === created === Date.now()` and doubles as
+the primary key and the gallery sort key.
 
-The last seven are additive and optional — IndexedDB is schemaless per record, so receipts saved
-before those fields existed simply lack them and render blank. That is why `VERSION` in
-`js/db.js` is still 1. Only adding an *index* would require bumping it and handling
-`onupgradeneeded`.
+`blob`/`thumb`/`w`/`h`/`size` are always page 1 of the receipt — a single-page receipt looks
+exactly like it did before multi-page support existed. `extraPages` (page 2+, same shape
+`{blob,thumb,w,h,size}` each) is absent entirely unless the user tapped "+" while cropping;
+`pagesOf(rec)` in `js/app.js` is the one place that reads either shape uniformly and must be used
+by any new code touching the image(s) instead of `rec.blob` directly.
+
+The last eight (everything but `blob`/`thumb`/`w`/`h`/`size`) are additive and optional —
+IndexedDB is schemaless per record, so receipts saved before those fields existed simply lack them
+and render blank. That is why `VERSION` in `js/db.js` is still 1. Only adding an *index* would
+require bumping it and handling `onupgradeneeded`.
 
 `synced` drives sync: `0`/absent means pending upload. Editing the six purchase fields sets it
 back to `0`, and `sync.js` upserts with `Prefer: resolution=merge-duplicates` — which is why the
-`racuni` table needs an UPDATE grant and policy, not just INSERT.
+`racuni` table needs an UPDATE grant and policy, not just INSERT. The cloud side stores page count
+in a `pages` int column (default 1) rather than mirroring `extraPages`; page 2+ files live at
+`<user_id>/<id>_p<n>.jpg` (`sync.js`'s `objectPath`), and their width/height are never stored in
+Postgres — `pull()` decodes the downloaded blob via `dims()` to recover them, since the `racuni`
+table only has one `w`/`h` pair (page 1's).
 
 Warranty expiry is derived, never stored: `kupljeno + garancija_let` computed in `warrantyEnd()`
 in `js/app.js`. Storing it would go stale.

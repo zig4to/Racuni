@@ -10,8 +10,9 @@ create table if not exists public.racuni (
   w           int         not null,
   h           int         not null,
   size        int         not null,
-  path        text        not null,           -- <user_id>/<id>.jpg
-  thumb_path  text        not null,           -- <user_id>/<id>_thumb.jpg
+  path        text        not null,           -- <user_id>/<id>.jpg (prva stran)
+  thumb_path  text        not null,           -- <user_id>/<id>_thumb.jpg (prva stran)
+  pages       int         not null default 1, -- stevilo strani; 2+ so <user_id>/<id>_p<n>.jpg
 
   -- Podatki, ki jih vpiše uporabnik. Vsi so neobvezni: račun se da shraniti
   -- takoj ob nakupu in dopolniti pozneje.
@@ -31,6 +32,7 @@ alter table public.racuni add column if not exists znamka        text;
 alter table public.racuni add column if not exists model         text;
 alter table public.racuni add column if not exists kupljeno      date;
 alter table public.racuni add column if not exists garancija_let numeric(4,1);
+alter table public.racuni add column if not exists pages         int not null default 1;
 
 create index if not exists racuni_user_created_idx
   on public.racuni (user_id, created desc);

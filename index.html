@@ -151,6 +151,7 @@
     </div>
 
     <div class="actions">
+      <button id="btnAddPage" type="button" class="btn btn-add-page" title="Dodaj še eno stran temu računu">+</button>
       <button id="btnCancel" class="btn">Prekliči</button>
       <button id="btnCrop" class="btn btn-primary">✓ Obreži in shrani</button>
     </div>
@@ -168,7 +169,12 @@
     <button id="btnClose" class="btn btn-sm">✕ Zapri</button>
     <span id="viewerMeta" class="muted"></span>
   </div>
-  <div class="viewer-img"><img id="viewerImg" alt="Shranjen račun"></div>
+  <div class="viewer-img">
+    <button id="btnPagePrev" type="button" class="page-nav page-prev" hidden aria-label="Prejšnja stran">‹</button>
+    <img id="viewerImg" alt="Shranjen račun">
+    <button id="btnPageNext" type="button" class="page-nav page-next" hidden aria-label="Naslednja stran">›</button>
+    <span id="pageIndicator" class="page-indicator" hidden></span>
+  </div>
 
   <div class="viewer-podatki">
     <p id="viewerWarranty" class="garancija" hidden></p>

@@ -62,6 +62,31 @@ window.Sync = (function () {
     }, Promise.resolve());
   }
 
+  /* Kot series, a zbere rezultate v polje — za prenos dodatnih strani, kjer
+     potrebujemo vsako sliko nazaj, ne le da se je zaporedje izvedlo. */
+  function seriesCollect(items, fn) {
+    var out = [];
+    return items.reduce(function (chain, item, i) {
+      return chain.then(function () { return fn(item, i); }).then(function (r) { out.push(r); });
+    }, Promise.resolve()).then(function () { return out; });
+  }
+
+  function dims(blob) {
+    if (window.createImageBitmap) {
+      return createImageBitmap(blob).then(function (bm) {
+        var d = { w: bm.width, h: bm.height };
+        if (bm.close) bm.close();
+        return d;
+      }).catch(function () { return { w: 0, h: 0 }; });
+    }
+    return new Promise(function (resolve) {
+      var url = URL.createObjectURL(blob), img = new Image();
+      img.onload = function () { URL.revokeObjectURL(url); resolve({ w: img.naturalWidth, h: img.naturalHeight }); };
+      img.onerror = function () { URL.revokeObjectURL(url); resolve({ w: 0, h: 0 }); };
+      img.src = url;
+    });
+  }
+
   // ------------------------------------------------------------------- seja
   function normalise(json) {
     var meta = (json.user && json.user.user_metadata) || {};
@@ -147,9 +172,14 @@ window.Sync = (function () {
     });
   }
 
-  function objectPath(id, thumb) {
-    return session.user_id + '/' + id + (thumb ? '_thumb' : '') + '.jpg';
+  /* page: 1, 2, ... za dodatne strani vecstranskega racuna — prva stran (0/
+     neveden) ohrani stara imena datotek, da se nic ne spremeni za obstojece
+     enostranske racune. */
+  function objectPath(id, thumb, page) {
+    return session.user_id + '/' + id + (page ? '_p' + page : '') + (thumb ? '_thumb' : '') + '.jpg';
   }
+
+  var MAX_PAGES = 20;   // vec, kot jih bo kdaj imel realen racun — za varno brisanje ob izbrisu
 
   function upload(path, blob) {
     return fetch(URL_BASE + '/storage/v1/object/' + BUCKET + '/' + path, {
@@ -172,8 +202,14 @@ window.Sync = (function () {
   }
 
   function removeObjects(id) {
-    // 404 je v redu — datoteke morda nikoli ni bilo.
-    return series([objectPath(id, false), objectPath(id, true)], function (p) {
+    /* 404 je v redu — datoteke morda nikoli ni bilo. Tombstone ne nosi
+       stevila strani, zato poskusimo pobrisati vse mozne strani do
+       MAX_PAGES — odvecni klici samo vrnejo 404. */
+    var paths = [objectPath(id, false), objectPath(id, true)];
+    for (var i = 1; i < MAX_PAGES; i++) {
+      paths.push(objectPath(id, false, i), objectPath(id, true, i));
+    }
+    return series(paths, function (p) {
       return fetch(URL_BASE + '/storage/v1/object/' + BUCKET + '/' + p, {
         method: 'DELETE', headers: headers()
       });
@@ -182,8 +218,17 @@ window.Sync = (function () {
 
   // -------------------------------------------------------------- prenos gor
   function pushOne(rec) {
-    return upload(objectPath(rec.id, false), rec.blob)
-      .then(function () { return upload(objectPath(rec.id, true), rec.thumb); })
+    var extra = rec.extraPages || [];
+    var uploads = [
+      function () { return upload(objectPath(rec.id, false), rec.blob); },
+      function () { return upload(objectPath(rec.id, true), rec.thumb); }
+    ];
+    extra.forEach(function (p, i) {
+      uploads.push(function () { return upload(objectPath(rec.id, false, i + 1), p.blob); });
+      uploads.push(function () { return upload(objectPath(rec.id, true, i + 1), p.thumb); });
+    });
+
+    return series(uploads, function (fn) { return fn(); })
       .then(function () {
         return rest('racuni', {
           method: 'POST',
@@ -201,6 +246,7 @@ window.Sync = (function () {
             w: rec.w, h: rec.h, size: rec.size,
             path: objectPath(rec.id, false),
             thumb_path: objectPath(rec.id, true),
+            pages: extra.length + 1,
             trgovina: rec.trgovina || null,
             izdelek: rec.izdelek || null,
             znamka: rec.znamka || null,
@@ -254,7 +300,7 @@ window.Sync = (function () {
     local.forEach(function (r) { mine[r.id] = r; });
 
     return rest('racuni?select=id,w,h,size,path,thumb_path,trgovina,izdelek,znamka,model,' +
-                'kupljeno,garancija_let&order=id.desc')
+                'kupljeno,garancija_let,pages&order=id.desc')
       .then(function (res) {
         if (!res.ok) return fail(res, 'Branje seznama ni uspelo');
         return res.json();
@@ -298,15 +344,35 @@ window.Sync = (function () {
             return Promise.all([download(row.path), download(row.thumb_path)])
               .then(function (blobs) {
                 var m = meta(row);
-                return DB.add({
+                var rec = {
                   id: row.id, created: row.id,
                   blob: blobs[0], thumb: blobs[1],
                   w: row.w, h: row.h, size: row.size, synced: 1,
                   trgovina: m.trgovina, izdelek: m.izdelek,
                   znamka: m.znamka, model: m.model,
                   kupljeno: m.kupljeno, garancija_let: m.garancija_let
+                };
+                var n = row.pages || 1;
+                if (n <= 1) return rec;
+                /* Dodatne strani — dimenzije v tabeli niso zabelezene (samo za
+                   prvo stran), zato jih po prenosu ugotovimo iz same slike. */
+                var idxs = [];
+                for (var k = 1; k < n; k++) idxs.push(k);
+                return seriesCollect(idxs, function (pageIdx) {
+                  return Promise.all([
+                    download(objectPath(row.id, false, pageIdx)),
+                    download(objectPath(row.id, true, pageIdx))
+                  ]).then(function (pblobs) {
+                    return dims(pblobs[0]).then(function (d) {
+                      return { blob: pblobs[0], thumb: pblobs[1], w: d.w, h: d.h, size: pblobs[0].size };
+                    });
+                  });
+                }).then(function (extraPages) {
+                  rec.extraPages = extraPages;
+                  return rec;
                 });
-              });
+              })
+              .then(function (rec) { return DB.add(rec); });
           });
         }).then(function () { return todo.length + osvezi.length + izbrisani.length; });
       });
