@@ -340,26 +340,33 @@
 
         card.appendChild(img);
 
-        /* Naslov kartice: izdelek, sicer trgovina. Brez obojega ostane le datum,
-           tako kot pri racunih, shranjenih pred temi polji. */
-        var naslov = rec.izdelek || rec.trgovina || '';
-        if (naslov) {
-          var title = document.createElement('div');
-          title.className = 'card-title';
-          title.textContent = naslov;
-          if (rec.izdelek && rec.trgovina) title.title = rec.izdelek + ' · ' + rec.trgovina;
-          card.appendChild(title);
+        /* Vrh kartice: ime izdelka, pod njim datum veljavnosti garancije —
+           brez izdelka/garancije ostane le ta del prazen. */
+        var w = warrantyInfo(rec);
+        if (rec.izdelek || w) {
+          var top = document.createElement('div');
+          top.className = 'card-top';
+
+          if (rec.izdelek) {
+            var title = document.createElement('div');
+            title.className = 'card-title';
+            title.textContent = rec.izdelek;
+            top.appendChild(title);
+          }
+
+          if (w) {
+            var badge = document.createElement('div');
+            badge.className = 'card-garancija' + w.cls;
+            badge.textContent = w.kratko;
+            top.appendChild(badge);
+            // Zelena obroba, dokler garancija ni potekla — vizualni signal na prvi pogled.
+            if (w.cls !== ' potekla') card.classList.add('garancija-velja');
+          }
+
+          card.appendChild(top);
         }
 
         card.appendChild(date);
-
-        var w = warrantyInfo(rec);
-        if (w) {
-          var badge = document.createElement('div');
-          badge.className = 'card-garancija' + w.cls;
-          badge.textContent = w.kratko;
-          card.appendChild(badge);
-        }
 
         card.addEventListener('click', function () { openViewer(rec.id); });
         el.grid.appendChild(card);

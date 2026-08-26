@@ -182,11 +182,14 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 }
 .card:active{transform:scale(.985)}
 @media (hover:hover){ .card:hover{transform:translateY(-2px);border-color:#3a4759} }
+/* garancija se ni potekla — zelena obroba je opozorilo na prvi pogled */
+.card.garancija-velja{border:2px solid var(--accent-2)}
+@media (hover:hover){ .card.garancija-velja:hover{border-color:var(--accent)} }
 .card img{width:100%;height:100%;object-fit:cover;display:block}
 .card .date{
   position:absolute;left:0;right:0;bottom:0;padding:16px 9px 7px;
   font-size:.71rem;font-weight:500;letter-spacing:.01em;color:#fff;
-  background:linear-gradient(transparent,rgba(0,0,0,.82));
+  background:linear-gradient(transparent,rgba(0,0,0,.9));
 }
 .empty{
   text-align:center;color:var(--text);line-height:1.65;
@@ -302,23 +305,20 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 .garancija.kmalu{background:rgba(251,191,36,.1);border-color:rgba(251,191,36,.4);color:#fbbf24}
 .garancija.potekla{background:rgba(248,113,113,.1);border-color:var(--danger-line);color:var(--danger)}
 
-/* naslov in znacka na kartici v galeriji */
+/* vrh kartice: ime izdelka in pod njim datum veljavnosti garancije */
+.card-top{
+  position:absolute;left:0;right:0;top:0;padding:10px 9px 14px;
+  display:flex;flex-direction:column;gap:3px;
+  background:linear-gradient(rgba(0,0,0,.92),rgba(0,0,0,.65) 65%,transparent);
+}
 .card-title{
-  position:absolute;left:0;right:0;bottom:22px;padding:0 9px;
   font-size:.78rem;font-weight:650;color:#fff;line-height:1.25;
   text-shadow:0 1px 3px rgba(0,0,0,.9);
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
 }
-/* daljsi preliv, da sta naslov in datum berljiva tudi na svetli slicici */
-.card .date{padding-top:42px;background:linear-gradient(transparent,rgba(0,0,0,.88) 55%)}
 .card-garancija{
-  position:absolute;top:7px;right:7px;max-width:calc(100% - 14px);
-  padding:3px 7px;border-radius:999px;
-  font-size:.63rem;font-weight:650;
-  background:rgba(12,15,20,.82);color:var(--accent);
-  border:1px solid rgba(74,222,128,.4);
-  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+  font-size:.68rem;font-weight:650;color:var(--accent);
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
 }
-.card-garancija.kmalu{color:#fbbf24;border-color:rgba(251,191,36,.45)}
-.card-garancija.potekla{color:var(--danger);border-color:var(--danger-line)}
+.card-garancija.kmalu{color:#fbbf24}
+.card-garancija.potekla{color:var(--danger)}
