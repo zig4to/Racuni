@@ -313,6 +313,7 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   max-height:46vh;overflow:auto;flex:none;
 }
 .save-row{display:flex;align-items:center;gap:10px}
+.add-page-row{margin-bottom:16px}
 .save-status{
   display:inline-flex;align-items:center;gap:5px;
   font-size:.85rem;font-weight:600;color:var(--accent);
