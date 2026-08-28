@@ -156,6 +156,12 @@
     return { text: 'Garancija do ' + datum, cls: '', kratko: 'do ' + datum };
   }
 
+  /* Kratek pripomoček za renderGallery (razvrsti potekle na dno seznama). */
+  function expired(rec) {
+    var w = warrantyInfo(rec);
+    return !!w && w.cls === ' potekla';
+  }
+
   function renderWarranty(rec) {
     var w = warrantyInfo(rec);
     el.viewerWarranty.hidden = !w;
@@ -543,6 +549,14 @@
     return DB.all().then(function (all) {
       var q = (el.searchInput.value || '').trim().toLowerCase();
       var items = all.filter(function (rec) { return matchesSearch(rec, q); });
+
+      /* Potekla garancija na dno seznama — znotraj vsake od obeh skupin
+         (potekla/ne) ostane vrstni red nespremenjen (Array#sort je stabilen),
+         torej najnovejši še vedno na vrhu. */
+      items.sort(function (a, b) {
+        var aExpired = expired(a), bExpired = expired(b);
+        return (aExpired === bExpired) ? 0 : (aExpired ? 1 : -1);
+      });
 
       el.grid.innerHTML = '';
       /* Poziv o prazni galeriji velja za res prazno shrambo; kadar filtrira
