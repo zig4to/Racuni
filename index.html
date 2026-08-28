@@ -21,13 +21,13 @@
 
 <header class="topbar">
   <div class="brand">
-    <span class="brand-mark">
+    <span id="brandMark" class="brand-mark">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
         <path d="M6 2.5h12a1 1 0 0 1 1 1v17.5l-2.5-1.5-2.5 1.5-2.5-1.5-2.5 1.5-2.5-1.5-2.5 1.5V3.5a1 1 0 0 1 1-1Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
         <path d="M8.5 8h7M8.5 11.5h7M8.5 15h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
       </svg>
     </span>
-    <h1>Računi</h1>
+    <h1 id="brandTitle">Računi</h1>
   </div>
   <div class="topbar-right">
     <div class="menu-wrap">
@@ -37,6 +37,45 @@
         </svg>
       </button>
       <div id="menuDropdown" class="menu-dropdown" hidden>
+        <div id="cloudMenuSection" hidden>
+          <button id="btnCloudToggle" class="menu-item" type="button" aria-haspopup="true" aria-expanded="false">
+            <svg class="menu-item-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true">
+              <circle cx="12" cy="8" r="3.4" stroke="currentColor" stroke-width="1.8"/>
+              <path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+            </svg>
+            <span id="cloudToggleLabel">Prijava</span>
+          </button>
+          <div id="cloudBox" class="cloud-box" hidden>
+            <div id="cloudLogin">
+              <h2>Prijava v oblak</h2>
+              <p class="muted">
+                Računi se shranijo v Supabase in so vidni na vseh tvojih napravah.
+                Brez prijave aplikacija dela naprej, le lokalno.
+              </p>
+              <div class="field">
+                <label for="cloudEmail">E-pošta</label>
+                <input id="cloudEmail" type="email" autocomplete="username" inputmode="email">
+              </div>
+              <div class="field">
+                <label for="cloudPass">Geslo</label>
+                <input id="cloudPass" type="password" autocomplete="current-password">
+              </div>
+              <p id="cloudErr" class="cloud-err" hidden></p>
+              <button id="btnCloudLogin" class="btn btn-primary">Prijava</button>
+            </div>
+
+            <div id="cloudAccount" hidden>
+              <p class="muted">Prijavljen kot <span id="cloudEmailShown"></span></p>
+              <span id="cloudStatus" class="muted"></span>
+              <div class="actions">
+                <button id="btnCloudSync" class="btn btn-primary">↻ Sinhroniziraj zdaj</button>
+                <button id="btnCloudLogout" class="btn">Odjava</button>
+              </div>
+              <p class="muted">Odjava ne izbriše računov na tej napravi.</p>
+            </div>
+          </div>
+        </div>
+        <hr class="menu-divider">
         <button id="btnOpenBoni" class="menu-item menu-item-bon" type="button">
           <svg class="menu-item-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true">
             <rect x="3.5" y="8.5" width="17" height="11.5" rx="1.6" stroke="currentColor" stroke-width="1.7"/>
@@ -47,37 +86,6 @@
           </svg>
           <span>Darilni boni</span>
         </button>
-        <hr class="menu-divider">
-        <div id="cloudBox" class="cloud-box" hidden>
-          <div id="cloudLogin">
-            <h2>Prijava v oblak</h2>
-            <p class="muted">
-              Računi se shranijo v Supabase in so vidni na vseh tvojih napravah.
-              Brez prijave aplikacija dela naprej, le lokalno.
-            </p>
-            <div class="field">
-              <label for="cloudEmail">E-pošta</label>
-              <input id="cloudEmail" type="email" autocomplete="username" inputmode="email">
-            </div>
-            <div class="field">
-              <label for="cloudPass">Geslo</label>
-              <input id="cloudPass" type="password" autocomplete="current-password">
-            </div>
-            <p id="cloudErr" class="cloud-err" hidden></p>
-            <button id="btnCloudLogin" class="btn btn-primary">Prijava</button>
-          </div>
-
-          <div id="cloudAccount" hidden>
-            <h2>Oblak</h2>
-            <p class="muted">Prijavljen kot <span id="cloudEmailShown"></span></p>
-            <span id="cloudStatus" class="muted"></span>
-            <div class="actions">
-              <button id="btnCloudSync" class="btn btn-primary">↻ Sinhroniziraj zdaj</button>
-              <button id="btnCloudLogout" class="btn">Odjava</button>
-            </div>
-            <p class="muted">Odjava ne izbriše računov na tej napravi.</p>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -203,7 +211,7 @@
   <!-- ================= DARILNI BONI ================= -->
   <section id="viewBoni" hidden>
     <div class="boni-head">
-      <button id="btnBoniBack" type="button" class="btn btn-sm">← Nazaj</button>
+      <button id="btnBoniBack" type="button" class="btn btn-sm btn-bon-outline">← Nazaj</button>
       <h2 class="section-title">Darilni boni</h2>
     </div>
 

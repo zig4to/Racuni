@@ -67,9 +67,11 @@ h1,h2{margin:0;font-weight:650;letter-spacing:-.01em}
   padding:12px 10px;font:inherit;font-size:.95rem;font-weight:600;color:var(--text);
   cursor:pointer;text-align:left;
 }
+.menu-item span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 @media (hover:hover){ .menu-item:hover{background:var(--panel-2)} }
+.menu-item-icon{flex:none}
 /* Darilni boni imajo svojo (oranžno) barvo že na vstopni točki v meniju. */
-.menu-item-bon .menu-item-icon{color:var(--bon-accent);flex:none}
+.menu-item-bon .menu-item-icon{color:var(--bon-accent)}
 .menu-divider{border:0;height:1px;margin:6px 4px;background:var(--line-soft)}
 .brand{display:flex;align-items:center;gap:11px;min-width:0}
 .brand h1{
@@ -81,6 +83,13 @@ h1,h2{margin:0;font-weight:650;letter-spacing:-.01em}
   border-radius:11px;color:var(--accent);
   background:linear-gradient(160deg, rgba(74,222,128,.20), rgba(74,222,128,.05));
   border:1px solid rgba(74,222,128,.35);
+  transition:background .15s ease, border-color .15s ease, color .15s ease;
+}
+/* Na strani darilnih bonov glava za trenutek prevzame oranžno shemo. */
+.brand-mark-bon{
+  color:var(--bon-accent);
+  background:linear-gradient(160deg, rgba(251,146,60,.20), rgba(251,146,60,.05));
+  border-color:rgba(251,146,60,.35);
 }
 .brand-mark svg{display:block}
 main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
@@ -117,6 +126,9 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   color:var(--bon-ink);border-color:transparent;
   box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 8px 20px -12px rgba(251,146,60,.9);
 }
+/* Gumb "← Nazaj" iz darilnih bonov — obarvana obroba, da izstopa med nevtralnimi gumbi. */
+.btn-bon-outline{border-color:var(--bon-accent);color:var(--bon-accent)}
+@media (hover:hover){ .btn-bon-outline:hover{border-color:var(--bon-accent-2);background:rgba(251,146,60,.1)} }
 .btn-sm{padding:9px 13px;font-size:.85rem;font-weight:550;border-radius:var(--radius-sm)}
 @media (hover:hover){
   .btn:hover{background:#26303e;border-color:#36435a}

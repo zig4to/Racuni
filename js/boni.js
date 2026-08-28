@@ -15,6 +15,7 @@
 
   var el = {};
   ['btnOpenBoni', 'menuDropdown', 'btnMenu', 'viewGallery', 'viewBoni', 'btnBoniBack',
+   'brandMark', 'brandTitle',
    'btnBonAdd', 'inputBonImages', 'formBon', 'bonPending', 'bTrgovina', 'bVrednost', 'bPotece',
    'btnBonFormCancel', 'btnBonFormSave', 'boniEmpty', 'boniGrid',
    'boniViewer', 'btnBoniViewerClose', 'boniViewerMeta', 'boniViewerExpiry',
@@ -367,14 +368,31 @@
   }
 
   // ------------------------------------------------------------- preklop pogledov
+  /* Glava (ikona + naslov "Računi") ob strani darilnih bonov za trenutek
+     postane ikona/naslov bonov — isti prijem kot povsod: original si
+     zapomnimo enkrat, ob vrnitvi ga preprosto postavimo nazaj. */
+  var BON_MARK = '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">' +
+    '<rect x="3.5" y="8.5" width="17" height="11.5" rx="1.6" stroke="currentColor" stroke-width="1.7"/>' +
+    '<path d="M3.5 12.5h17" stroke="currentColor" stroke-width="1.7"/>' +
+    '<path d="M12 8.5v11.5" stroke="currentColor" stroke-width="1.7"/>' +
+    '<path d="M12 8.5c-1.6 0-3.4-.9-3.4-2.7A2 2 0 0 1 10.5 3.6C12 3.6 12 6.6 12 8.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+    '<path d="M12 8.5c1.6 0 3.4-.9 3.4-2.7a2 2 0 0 0-2-2.2C12 3.6 12 6.6 12 8.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/>' +
+    '</svg>';
+  var origMark = el.brandMark ? el.brandMark.innerHTML : '';
+  var origTitle = el.brandTitle ? el.brandTitle.textContent : '';
+
   function showBoni() {
     el.viewGallery.hidden = true;
     el.viewBoni.hidden = false;
+    if (el.brandMark) { el.brandMark.innerHTML = BON_MARK; el.brandMark.classList.add('brand-mark-bon'); }
+    if (el.brandTitle) el.brandTitle.textContent = 'Darilni boni';
     window.scrollTo(0, 0);
   }
   function showGalleryBack() {
     el.viewBoni.hidden = true;
     el.viewGallery.hidden = false;
+    if (el.brandMark) { el.brandMark.innerHTML = origMark; el.brandMark.classList.remove('brand-mark-bon'); }
+    if (el.brandTitle) el.brandTitle.textContent = origTitle;
   }
 
   // ---------------------------------------------------------------- dogodki
