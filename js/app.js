@@ -17,7 +17,7 @@
    'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
    'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty',
    'btnPagePrev', 'btnPageNext', 'pageIndicator', 'btnAddPageCamera', 'btnAddPagePicker',
-   'btnManagePages', 'pagesManager',
+   'btnManagePages', 'pagesManager', 'btnEditImage',
    'btnMenu', 'menuDropdown'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
@@ -34,7 +34,8 @@
     captureMethod: null,  // isto, a se ne pobrise ob zaprtju obrazca — "+" ga potrebuje za naslednjo stran
     firstPage: null,      // prva stran, zajeta v tej urejevalni seji (postane rec.blob/thumb/w/h/size pri novem racunu)
     extraPages: [],        // dodatne strani, zajete v tej urejevalni seji
-    appendTo: null        // id obstojecega racuna, ce "+" v pregledovalniku dodaja strani vanj namesto v nov zapis
+    appendTo: null,        // id obstojecega racuna, ce "+" v pregledovalniku dodaja strani vanj namesto v nov zapis
+    editingPage: null      // { id, pageIndex } - "Uredi sliko" ponovno obreze ze shranjeno stran namesto dodajanja nove
   };
 
   // ------------------------------------------------------------- pripomočki
@@ -504,6 +505,22 @@
       Promise.all([canvasToBlob(canvas, JPEG_Q), canvasToBlob(thumb, 0.75)])
         .then(function (blobs) {
           var last = { blob: blobs[0], thumb: blobs[1], w: canvas.width, h: canvas.height, size: blobs[0].size };
+
+          /* "Uredi sliko" je nastavil editingPage — zamenja natanko to stran
+             obstoječega zapisa, brez dodajanja nove ali ustvarjanja novega
+             računa. */
+          if (state.editingPage) {
+            var editing = state.editingPage;
+            return DB.get(editing.id).then(function (rec) {
+              if (!rec) throw new Error('Račun ne obstaja več.');
+              var pages = pagesOf(rec);
+              pages[editing.pageIndex] = last;
+              setPages(rec, pages);
+              rec.synced = 0;   // sprememba mora se v oblak
+              return DB.add(rec).then(function () { return rec.id; });
+            });
+          }
+
           /* Vse strani, zajete v tej urejevalni seji — ce "+" ni bil kliknjen,
              je to samo ta ena stran, enako kot pri racunih od prej. */
           var staged = state.firstPage ? state.extraPages.concat([last]) : [last];
@@ -539,14 +556,16 @@
           return DB.add(rec).then(function () { return id; });
         })
         .then(function (id) {
-          var reopenId = state.appendTo;
+          var reopenId = state.appendTo || (state.editingPage && state.editingPage.id);
           state.work = null; state.corners = null;
           state.firstPage = null; state.extraPages = []; state.captureMethod = null; state.appendTo = null;
+          state.editingPage = null;
+          el.btnAddPage.hidden = false;
           resetForm();
           showGallery();
           if (window.Sync) Sync.afterSave();   // v ozadju, vmesnika ne zadrzuje
           return renderGallery().then(function () {
-            // Nazaj v pregledovalnik istega racuna, da nova stran takoj vidna.
+            // Nazaj v pregledovalnik istega racuna, da nova/popravljena stran takoj vidna.
             if (reopenId) openViewer(reopenId);
           });
         })
@@ -824,6 +843,36 @@
     closeViewer();
   }
 
+  /* "Uredi sliko" v pregledovalniku — vrne prikazano (že shranjeno) stran
+     nazaj v urejevalnik, da jo je mogoče znova obrezati. Za razliko od "+"
+     (doda novo stran) ali navadnega zajema (ustvari nov račun), shranjevanje
+     tu zamenja natanko to stran — glej state.editingPage in cropAndSave. */
+  function editCurrentPage() {
+    if (!state.current) return;
+    var rec = state.current, idx = state.pageIndex;
+    var p = pagesOf(rec)[idx];
+    var recId = rec.id, multi = pagesOf(rec).length > 1;
+    closeViewer();
+
+    busy(true, 'Nalagam sliko za urejanje…');
+    setTimeout(function () {
+      decode(p.blob).then(function (src) {
+        state.work = toWorkCanvas(src);
+        state.corners = Detect.defaultCorners(state.work.width, state.work.height);
+        state.editingPage = { id: recId, pageIndex: idx };
+        state.appendTo = null;
+        state.captureMethod = null;
+        el.btnAddPage.hidden = true;
+        el.hint.textContent = (multi ? 'Stran ' + (idx + 1) + ' — ' : '') +
+          'Popravi vogale in shrani — nadomesti trenutno sliko.';
+        drawPreview();
+        showEdit();
+      }).catch(function (err) {
+        alert(err.message || 'Napaka pri branju slike.');
+      }).then(function () { busy(false); });
+    }, 30);
+  }
+
   function download() {
     if (!state.current) return;
     var pages = pagesOf(state.current), p = pages[state.pageIndex];
@@ -965,9 +1014,11 @@
   el.btnCrop.addEventListener('click', cropAndSave);
   el.btnAddPage.addEventListener('click', addPage);
   el.btnCancel.addEventListener('click', function () {
-    var reopenId = state.appendTo;
+    var reopenId = state.appendTo || (state.editingPage && state.editingPage.id);
     state.work = null; state.corners = null;
     state.firstPage = null; state.extraPages = []; state.captureMethod = null; state.appendTo = null;
+    state.editingPage = null;
+    el.btnAddPage.hidden = false;
     showGallery();
     if (reopenId) openViewer(reopenId);   // nazaj v pregledovalnik, ne v golo galerijo
   });
@@ -975,6 +1026,7 @@
   el.btnAddPageCamera.addEventListener('click', function () { addPageToViewer('camera'); });
   el.btnAddPagePicker.addEventListener('click', function () { addPageToViewer('picker'); });
   el.btnManagePages.addEventListener('click', togglePagesManager);
+  el.btnEditImage.addEventListener('click', editCurrentPage);
   el.btnPagePrev.addEventListener('click', prevPage);
   el.btnPageNext.addEventListener('click', nextPage);
   el.btnDownload.addEventListener('click', download);
