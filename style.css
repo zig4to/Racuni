@@ -3,6 +3,7 @@
   --panel:#181d26; --panel-2:#212936; --line:#2a3341; --line-soft:#212936;
   --text:#e9edf4; --muted:#94a0b2;
   --accent:#4ade80; --accent-2:#2fb765; --accent-ink:#052617;
+  --bon-accent:#fb923c; --bon-accent-2:#ea7c1e; --bon-ink:#341603;
   --danger:#f87171; --danger-line:#4a2a2e;
   --radius:16px; --radius-sm:11px;
   --shadow:0 1px 2px rgba(0,0,0,.35), 0 10px 28px -16px rgba(0,0,0,.9);
@@ -41,6 +42,35 @@ h1,h2{margin:0;font-weight:650;letter-spacing:-.01em}
   border-bottom:1px solid var(--line-soft);
 }
 .topbar-right{display:flex;align-items:center;gap:12px;flex:none}
+.menu-wrap{position:relative}
+.btn-menu{
+  display:flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:50%;flex:none;cursor:pointer;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--text);
+  transition:transform .12s ease, background .15s ease, border-color .15s ease;
+}
+.btn-menu:active{transform:scale(.96)}
+@media (hover:hover){ .btn-menu:hover{background:#26303e;border-color:#36435a} }
+/* utrip na gumbu menija, dokler sinhronizacija tece — isti @keyframes utrip kot prej */
+.btn-menu.busy-dot{border-color:var(--accent-2);animation:utrip 1.1s ease-in-out infinite}
+
+.menu-dropdown{
+  position:absolute;top:calc(100% + 10px);right:0;z-index:25;
+  width:min(360px,88vw);max-height:calc(100vh - 90px);overflow:auto;
+  background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:8px;
+}
+.menu-item{
+  display:flex;align-items:center;gap:11px;width:100%;
+  background:none;border:none;border-radius:var(--radius-sm);
+  padding:12px 10px;font:inherit;font-size:.95rem;font-weight:600;color:var(--text);
+  cursor:pointer;text-align:left;
+}
+@media (hover:hover){ .menu-item:hover{background:var(--panel-2)} }
+/* Darilni boni imajo svojo (oranžno) barvo že na vstopni točki v meniju. */
+.menu-item-bon .menu-item-icon{color:var(--bon-accent);flex:none}
+.menu-divider{border:0;height:1px;margin:6px 4px;background:var(--line-soft)}
 .brand{display:flex;align-items:center;gap:11px;min-width:0}
 .brand h1{
   font-size:1.5rem;font-weight:750;letter-spacing:-.025em;
@@ -79,10 +109,19 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 8px 20px -12px rgba(74,222,128,.9);
 }
 .btn-danger{background:transparent;color:var(--danger);border-color:var(--danger-line);box-shadow:none}
+/* Darilni boni imajo lastno (oranžno) barvno shemo, ločeno od zelene pri
+   računih — le na vstopni točki (gumb/ikona v meniju) in glavnih gumbih
+   znotraj strani; veljavnost bona še vedno kaže zeleno/rdečo (.garancija*). */
+.btn-bon{
+  background:linear-gradient(180deg,var(--bon-accent),var(--bon-accent-2));
+  color:var(--bon-ink);border-color:transparent;
+  box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 8px 20px -12px rgba(251,146,60,.9);
+}
 .btn-sm{padding:9px 13px;font-size:.85rem;font-weight:550;border-radius:var(--radius-sm)}
 @media (hover:hover){
   .btn:hover{background:#26303e;border-color:#36435a}
   .btn-primary:hover{background:linear-gradient(180deg,#5ce68f,var(--accent))}
+  .btn-bon:hover{background:linear-gradient(180deg,#fdae6b,var(--bon-accent))}
   .btn-danger:hover{background:rgba(248,113,113,.1);border-color:#5d3338}
 }
 .check{display:flex;align-items:center;gap:9px;font-size:.85rem;color:var(--muted);cursor:pointer}
@@ -99,17 +138,21 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 .viewer-actions .btn-primary{
   box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 10px 28px -14px rgba(74,222,128,.9);
 }
-.capture .btn:not(.btn-primary),
-.viewer-actions .btn:not(.btn-primary):not(.btn-danger){
+.capture .btn-bon,
+.viewer-actions .btn-bon{
+  box-shadow:0 1px 0 rgba(255,255,255,.25) inset, 0 10px 28px -14px rgba(251,146,60,.9);
+}
+.capture .btn:not(.btn-primary):not(.btn-bon),
+.viewer-actions .btn:not(.btn-primary):not(.btn-bon):not(.btn-danger){
   background:linear-gradient(180deg,var(--panel-2),var(--panel));
   transition:transform .12s ease, background .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
-.capture .btn:not(.btn-primary) .btn-icon,
-.viewer-actions .btn:not(.btn-primary):not(.btn-danger) .btn-icon{color:var(--accent);opacity:.9}
+.capture .btn:not(.btn-primary):not(.btn-bon) .btn-icon,
+.viewer-actions .btn:not(.btn-primary):not(.btn-bon):not(.btn-danger) .btn-icon{color:var(--accent);opacity:.9}
 .viewer-actions .btn-danger{box-shadow:none}
 @media (hover:hover){
-  .capture .btn:not(.btn-primary):hover,
-  .viewer-actions .btn:not(.btn-primary):not(.btn-danger):hover{border-color:var(--accent-2)}
+  .capture .btn:not(.btn-primary):not(.btn-bon):hover,
+  .viewer-actions .btn:not(.btn-primary):not(.btn-bon):not(.btn-danger):hover{border-color:var(--accent-2)}
 }
 .btn-icon{flex:none}
 
@@ -120,6 +163,19 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 }
 .form-new .section-title{margin-bottom:14px}
 .field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+
+/* ---------- darilni boni: glava strani in predogled dodanih slik ---------- */
+.boni-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.boni-head .section-title{margin:0}
+.pending-images{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.pending-thumb{position:relative;width:76px;height:76px;border-radius:10px;overflow:hidden;border:1px solid var(--line);flex:none}
+.pending-thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.pending-thumb button{
+  position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;padding:0;
+  background:rgba(12,15,20,.78);border:1px solid rgba(255,255,255,.15);color:#fff;
+  font-size:.85rem;line-height:1;cursor:pointer;
+}
 .field label{font-size:.8rem;font-weight:600;color:var(--muted)}
 .field input{
   width:100%;appearance:none;-webkit-appearance:none;
@@ -293,10 +349,8 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 
 /* ---------- oblak ---------- */
 .cloud-box{
-  flex:1;overflow:auto;
-  padding:22px 18px calc(22px + env(safe-area-inset-bottom));
+  padding:18px 18px calc(18px + env(safe-area-inset-bottom));
   display:flex;flex-direction:column;gap:14px;
-  max-width:460px;width:100%;margin:0 auto;
 }
 .cloud-box h2{font-size:1.15rem}
 /* .field in .field-row sta že definirana pri obrazcu za nov račun — obrazca

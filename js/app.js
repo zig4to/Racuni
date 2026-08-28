@@ -15,7 +15,8 @@
    'formNew', 'fTrgovina', 'fIzdelek', 'fZnamka', 'fModel', 'fDatum', 'fGarancija', 'btnFormNext',
    'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
    'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty',
-   'saveMetaStatus', 'btnPagePrev', 'btnPageNext', 'pageIndicator', 'btnAddPageViewer'
+   'saveMetaStatus', 'btnPagePrev', 'btnPageNext', 'pageIndicator', 'btnAddPageViewer',
+   'btnMenu', 'menuDropdown'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
   var handles = Array.prototype.slice.call(document.querySelectorAll('.handle'));
@@ -725,6 +726,36 @@
     if (e.key === 'Escape' && !el.viewer.hidden) closeViewer();
   });
 
+  // ------------------------------------------------------------- glavni meni
+  /* Mehanika spustnega menija v glavi (odpri/zapri/klik izven/Esc) je tu ena
+     sama — vsebino vanj (prijava v oblak, darilni boni …) vpisujeta cloud.js
+     in boni.js neodvisno, vsak v svoj del menuDropdown. onMenuOpen je kljuka
+     zanju, da lahko ob vsakem odprtju osvežita svoje stanje. */
+  var menuOpenHooks = [];
+  if (el.btnMenu && el.menuDropdown) {
+    el.btnMenu.hidden = false;
+
+    var openMenu = function () {
+      el.menuDropdown.hidden = false;
+      el.btnMenu.setAttribute('aria-expanded', 'true');
+      menuOpenHooks.forEach(function (fn) { fn(); });
+    };
+    var closeMenu = function () {
+      el.menuDropdown.hidden = true;
+      el.btnMenu.setAttribute('aria-expanded', 'false');
+    };
+
+    el.btnMenu.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (el.menuDropdown.hidden) openMenu(); else closeMenu();
+    });
+    document.addEventListener('click', function (e) {
+      if (!el.menuDropdown.hidden && !el.menuDropdown.contains(e.target)) closeMenu();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && !el.menuDropdown.hidden) closeMenu();
+    });
+  }
 
   // ------------------------------------------------------------- trdo osvežimo
   /* Navadni location.reload() bi še vedno stregel service worker iz predpomnilnika
@@ -749,7 +780,7 @@
   el.btnRefresh.addEventListener('click', hardRefresh);
 
   /* Majhna povrsina za js/sync.js, da po prenosu iz oblaka osvezi galerijo. */
-  window.App = { refreshGallery: renderGallery };
+  window.App = { refreshGallery: renderGallery, onMenuOpen: menuOpenHooks };
 
   renderGallery();
 

@@ -1,36 +1,28 @@
 /* Vmesnik za oblak: prijava, odjava, gumb za sinhronizacijo in stanje.
-   Vsa logika je v js/sync.js — tu je samo vezava na DOM. */
+   Vsa logika je v js/sync.js — tu je samo vezava na DOM. Odpiranje/zapiranje
+   menija samega je v js/app.js (glej window.App.onMenuOpen) — tu upravljamo
+   le vsebino cloudBox znotraj njega. */
 (function () {
   'use strict';
 
   if (!window.Sync) return;
 
   var el = {};
-  ['btnCloud', 'btnCloudLabel', 'cloud', 'btnCloudClose', 'cloudStatus', 'cloudLogin', 'cloudAccount',
+  ['btnMenu', 'cloudBox', 'cloudStatus', 'cloudLogin', 'cloudAccount',
    'cloudEmail', 'cloudPass', 'cloudErr', 'btnCloudLogin', 'cloudEmailShown',
    'btnCloudSync', 'btnCloudLogout'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
-  if (!el.btnCloud || !el.cloud) return;
+  if (!el.cloudBox) return;
 
   /* Dokler v js/sync.js nista vpisana URL_BASE in API_KEY, se aplikacija vede
-     natanko tako kot prej — gumb za oblak sploh ne obstaja. */
+     natanko tako kot prej — razdelek za oblak v meniju sploh ne obstaja. */
   if (!Sync.configured()) return;
-  el.btnCloud.hidden = false;
+  el.cloudBox.hidden = false;
 
   function showError(msg) {
     el.cloudErr.textContent = msg || '';
     el.cloudErr.hidden = !msg;
-  }
-
-  /* Ime na gumbu je znak, da je prijava uspela — brez njega bi gumb po
-     prijavi kazal isto splosno besedo ne glede na to, kdo je prijavljen.
-     Ce Supabase ne pozna imena (user_metadata), ga izpeljemo iz e-poste. */
-  function displayName(s) {
-    if (s.name) return s.name;
-    var local = (s.email || '').split('@')[0];
-    var first = local.split(/[^A-Za-zÀ-ſ]+/)[0] || local;
-    return first ? first.charAt(0).toUpperCase() + first.slice(1) : (s.email || 'Racun');
   }
 
   function render() {
@@ -38,7 +30,6 @@
     el.cloudLogin.hidden = !!s;
     el.cloudAccount.hidden = !s;
     if (s) el.cloudEmailShown.textContent = s.email || '';
-    el.btnCloudLabel.textContent = s ? displayName(s) : 'Prijava';
   }
 
   /* Jasna povratna informacija po "Sinhroniziraj zdaj": zelena kljukica ob
@@ -48,20 +39,13 @@
     el.cloudStatus.textContent = text ? (prefix + text) : '';
     el.cloudStatus.className = 'muted' +
       (kind === 'ok' ? ' status-ok' : kind === 'error' ? ' status-error' : '');
-    el.btnCloud.classList[busy ? 'add' : 'remove']('busy-dot');
+    if (el.btnMenu) el.btnMenu.classList[busy ? 'add' : 'remove']('busy-dot');
   };
 
-  el.btnCloud.addEventListener('click', function () {
-    showError('');
-    render();
-    el.cloud.hidden = false;
-  });
-
-  el.btnCloudClose.addEventListener('click', function () { el.cloud.hidden = true; });
-
-  document.addEventListener('keydown', function (e) {
-    if (e.key === 'Escape' && !el.cloud.hidden) el.cloud.hidden = true;
-  });
+  // Ob vsakem odprtju menija osvežimo stanje prijave (npr. seja je medtem potekla).
+  if (window.App && window.App.onMenuOpen) {
+    window.App.onMenuOpen.push(function () { showError(''); render(); });
+  }
 
   el.btnCloudLogin.addEventListener('click', function () {
     var email = (el.cloudEmail.value || '').trim();
@@ -84,11 +68,9 @@
   el.btnCloudSync.addEventListener('click', function () { Sync.syncNow(); });
 
   el.btnCloudLogout.addEventListener('click', function () {
-    /* Lokalni računi ostanejo — odjava odklopi oblak, ne izbriše galerije. */
-    Sync.signOut().then(function () {
-      render();
-      el.cloud.hidden = true;
-    });
+    /* Lokalni računi ostanejo — odjava odklopi oblak, ne izbriše galerije.
+       Meni ostane odprt: render() takoj pokaže prijavni obrazec nazaj. */
+    Sync.signOut().then(render);
   });
 
   // Ob zagonu in ob vrnitvi povezave poskusimo uskladiti v ozadju.
