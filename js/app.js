@@ -440,8 +440,9 @@
             badge.className = 'card-garancija' + w.cls;
             badge.textContent = w.kratko;
             top.appendChild(badge);
-            // Zelena obroba, dokler garancija ni potekla — vizualni signal na prvi pogled.
-            if (w.cls !== ' potekla') card.classList.add('garancija-velja');
+            // Zelena obroba, dokler garancija ni potekla, rdeča, ko je — vizualni signal na prvi pogled.
+            if (w.cls === ' potekla') card.classList.add('garancija-potekla');
+            else card.classList.add('garancija-velja');
           }
 
           card.appendChild(top);
