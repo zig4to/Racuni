@@ -296,7 +296,7 @@
      premakne tudi njihova nadrejena škatla. Prav tako drag v startDrag zgoraj
      bere getBoundingClientRect() sproti, ki že upošteva trenutno preoblikovanje. */
   var zoom = { scale: 1, x: 0, y: 0 };
-  var MIN_ZOOM = 1, MAX_ZOOM = 4;
+  var MIN_ZOOM = 0.5, MAX_ZOOM = 4;
 
   function applyZoom() {
     el.stage.style.transform = 'translate(' + zoom.x + 'px,' + zoom.y + 'px) scale(' + zoom.scale + ')';
@@ -309,13 +309,15 @@
 
   /* Zapre razpon povečave na .stage-evo lastno (nepreoblikovano) velikost —
      samo-referenčno, da se izognemo neusklajenosti z okvirjem .stage-wrap
-     (ta ob sredinjenju z flex ni nujno enako širok kot .stage). */
+     (ta ob sredinjenju z flex ni nujno enako širok kot .stage). Pod MAX_ZOOM
+     lahko slika postane manjša od okvirja (glej MIN_ZOOM) — takrat jo
+     sredinamo namesto da jo lepimo na rob, .stage-wrap pa ima belo ozadje
+     (glej style.css), da manjkajoči rob ni temen kot stran, ampak bel. */
   function clampPan() {
-    if (zoom.scale <= 1.001) { zoom.scale = 1; zoom.x = 0; zoom.y = 0; return; }
     var naturalW = el.stage.offsetWidth, naturalH = el.stage.offsetHeight;
     var scaledW = naturalW * zoom.scale, scaledH = naturalH * zoom.scale;
-    zoom.x = Math.max(naturalW - scaledW, Math.min(0, zoom.x));
-    zoom.y = Math.max(naturalH - scaledH, Math.min(0, zoom.y));
+    zoom.x = scaledW <= naturalW ? (naturalW - scaledW) / 2 : Math.max(naturalW - scaledW, Math.min(0, zoom.x));
+    zoom.y = scaledH <= naturalH ? (naturalH - scaledH) / 2 : Math.max(naturalH - scaledH, Math.min(0, zoom.y));
   }
 
   /* Poveča/pomanjša okoli točke (clientX, clientY) — ista vsebinska točka

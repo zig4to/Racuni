@@ -306,7 +306,10 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
 /* ---------- urejanje ---------- */
 /* overflow:hidden na wrapperju obreze povecano/premaknjeno sliko na
    naravno velikost odra (.stage) — glej zoom v js/app.js. */
-.stage-wrap{display:flex;justify-content:center;overflow:hidden}
+/* Belo ozadje, ne temno kot stran — vidno okoli slike, ko je z gumbom "−"
+   pomanjšana pod svojo naravno velikost (glej clampPan v js/app.js), ki jo
+   takrat sredinamo namesto lepi na rob. */
+.stage-wrap{display:flex;justify-content:center;overflow:hidden;background:#fff;border-radius:12px}
 .stage{position:relative;display:inline-block;touch-action:none;max-width:100%;
   border-radius:12px;box-shadow:var(--shadow);transform-origin:0 0}
 .stage canvas{display:block;max-width:100%;max-height:58vh;width:auto;height:auto;border-radius:12px}
