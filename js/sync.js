@@ -19,8 +19,10 @@ window.Sync = (function () {
   var API_KEY  = 'sb_publishable_3888vcj_lpaerHs9H74Llg_-0p1W_MC';        // javni ključ 'sb_publishable_...'
 
   var BUCKET      = 'racuni';
+  var BUCKET_BONI = 'boni';
   var SESSION_KEY = 'racuni-seja';        // lasten ključ, ločen od supabase-js
-  var TOMB_KEY    = 'racuni-izbrisani';   // ID-ji, izbrisani brez povezave
+  var TOMB_KEY      = 'racuni-izbrisani';       // ID-ji računov, izbrisani brez povezave
+  var TOMB_KEY_BONI = 'racuni-boni-izbrisani';  // isto, za darilne bone
 
   var session = null;
   var running = false;
@@ -52,6 +54,17 @@ window.Sync = (function () {
 
   function dropTombstone(id) {
     writeJson(TOMB_KEY, tombstones().filter(function (x) { return x !== id; }));
+  }
+
+  function tombstonesBoni() { return readJson(TOMB_KEY_BONI, []); }
+
+  function addTombstoneBoni(id) {
+    var t = tombstonesBoni();
+    if (t.indexOf(id) < 0) { t.push(id); writeJson(TOMB_KEY_BONI, t); }
+  }
+
+  function dropTombstoneBoni(id) {
+    writeJson(TOMB_KEY_BONI, tombstonesBoni().filter(function (x) { return x !== id; }));
   }
 
   /* Zaporedno izvajanje — slike prenašamo drugo za drugo, da telefon ne odpre
@@ -179,10 +192,17 @@ window.Sync = (function () {
     return session.user_id + '/' + id + (page ? '_p' + page : '') + (thumb ? '_thumb' : '') + '.jpg';
   }
 
-  var MAX_PAGES = 20;   // vec, kot jih bo kdaj imel realen racun — za varno brisanje ob izbrisu
+  /* Darilni boni nimajo "prve strani" kot računi — vse slike so enakovredne,
+     zato preprost <id>_<indeks>. */
+  function bonObjectPath(id, index, thumb) {
+    return session.user_id + '/' + id + '_' + index + (thumb ? '_thumb' : '') + '.jpg';
+  }
 
-  function upload(path, blob) {
-    return fetch(URL_BASE + '/storage/v1/object/' + BUCKET + '/' + path, {
+  var MAX_PAGES = 20;       // vec, kot jih bo kdaj imel realen racun — za varno brisanje ob izbrisu
+  var MAX_BON_IMAGES = 20;  // isto, za darilne bone
+
+  function upload(bucket, path, blob) {
+    return fetch(URL_BASE + '/storage/v1/object/' + bucket + '/' + path, {
       method: 'POST',
       headers: headers({ 'Content-Type': 'image/jpeg', 'x-upsert': 'true' }),
       body: blob
@@ -192,12 +212,20 @@ window.Sync = (function () {
     });
   }
 
-  function download(path) {
-    return fetch(URL_BASE + '/storage/v1/object/' + BUCKET + '/' + path, {
+  function download(bucket, path) {
+    return fetch(URL_BASE + '/storage/v1/object/' + bucket + '/' + path, {
       headers: headers()
     }).then(function (res) {
       if (!res.ok) return fail(res, 'Prenos slike ni uspel');
       return res.blob();
+    });
+  }
+
+  function removeObjectsIn(bucket, paths) {
+    return series(paths, function (p) {
+      return fetch(URL_BASE + '/storage/v1/object/' + bucket + '/' + p, {
+        method: 'DELETE', headers: headers()
+      });
     });
   }
 
@@ -209,23 +237,25 @@ window.Sync = (function () {
     for (var i = 1; i < MAX_PAGES; i++) {
       paths.push(objectPath(id, false, i), objectPath(id, true, i));
     }
-    return series(paths, function (p) {
-      return fetch(URL_BASE + '/storage/v1/object/' + BUCKET + '/' + p, {
-        method: 'DELETE', headers: headers()
-      });
-    });
+    return removeObjectsIn(BUCKET, paths);
+  }
+
+  function removeBonObjects(id) {
+    var paths = [];
+    for (var i = 0; i < MAX_BON_IMAGES; i++) paths.push(bonObjectPath(id, i, false), bonObjectPath(id, i, true));
+    return removeObjectsIn(BUCKET_BONI, paths);
   }
 
   // -------------------------------------------------------------- prenos gor
   function pushOne(rec) {
     var extra = rec.extraPages || [];
     var uploads = [
-      function () { return upload(objectPath(rec.id, false), rec.blob); },
-      function () { return upload(objectPath(rec.id, true), rec.thumb); }
+      function () { return upload(BUCKET, objectPath(rec.id, false), rec.blob); },
+      function () { return upload(BUCKET, objectPath(rec.id, true), rec.thumb); }
     ];
     extra.forEach(function (p, i) {
-      uploads.push(function () { return upload(objectPath(rec.id, false, i + 1), p.blob); });
-      uploads.push(function () { return upload(objectPath(rec.id, true, i + 1), p.thumb); });
+      uploads.push(function () { return upload(BUCKET, objectPath(rec.id, false, i + 1), p.blob); });
+      uploads.push(function () { return upload(BUCKET, objectPath(rec.id, true, i + 1), p.thumb); });
     });
 
     return series(uploads, function (fn) { return fn(); })
@@ -341,7 +371,7 @@ window.Sync = (function () {
         }).then(function () {
           return series(todo, function (row, i) {
             status('Prenašam ' + (i + 1) + '/' + todo.length + '…', true);
-            return Promise.all([download(row.path), download(row.thumb_path)])
+            return Promise.all([download(BUCKET, row.path), download(BUCKET, row.thumb_path)])
               .then(function (blobs) {
                 var m = meta(row);
                 var rec = {
@@ -360,8 +390,8 @@ window.Sync = (function () {
                 for (var k = 1; k < n; k++) idxs.push(k);
                 return seriesCollect(idxs, function (pageIdx) {
                   return Promise.all([
-                    download(objectPath(row.id, false, pageIdx)),
-                    download(objectPath(row.id, true, pageIdx))
+                    download(BUCKET, objectPath(row.id, false, pageIdx)),
+                    download(BUCKET, objectPath(row.id, true, pageIdx))
                   ]).then(function (pblobs) {
                     return dims(pblobs[0]).then(function (d) {
                       return { blob: pblobs[0], thumb: pblobs[1], w: d.w, h: d.h, size: pblobs[0].size };
@@ -392,6 +422,133 @@ window.Sync = (function () {
     });
   }
 
+  // ==================================================== darilni boni: prenos
+  /* Ista zgradba kot pri računih (pushOne/push, meta/pull, flushDeletes) — le
+     da je rec.images že enoten seznam (brez posebne "prve strani"), zato je
+     nalaganje/prenos preprostejši, in da se w/h/size shranijo naravnost v
+     stolpec images (jsonb), ne izpeljejo iz prenesene slike. */
+  function pushOneBon(rec) {
+    var uploads = [];
+    rec.images.forEach(function (im, i) {
+      uploads.push(function () { return upload(BUCKET_BONI, bonObjectPath(rec.id, i, false), im.blob); });
+      uploads.push(function () { return upload(BUCKET_BONI, bonObjectPath(rec.id, i, true), im.thumb); });
+    });
+
+    return series(uploads, function (fn) { return fn(); })
+      .then(function () {
+        return rest('darilni_boni', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Prefer: 'resolution=merge-duplicates,return=minimal'
+          },
+          body: JSON.stringify({
+            id: rec.id,
+            user_id: session.user_id,
+            created: new Date(rec.created).toISOString(),
+            trgovina: rec.trgovina || null,
+            vrednost: (rec.vrednost === 0 || rec.vrednost) ? rec.vrednost : null,
+            potece: rec.potece || null,
+            images: rec.images.map(function (im) { return { w: im.w, h: im.h, size: im.size }; })
+          })
+        });
+      })
+      .then(function (res) {
+        if (!res.ok) return fail(res, 'Shranjevanje bona ni uspelo');
+        rec.synced = 1;
+        return DB.addBon(rec);
+      });
+  }
+
+  function pushBoni(local) {
+    var todo = local.filter(function (r) { return !r.synced; });
+    if (!todo.length) return Promise.resolve(0);
+    return series(todo, function (rec, i) {
+      status('Nalagam bon ' + (i + 1) + '/' + todo.length + '…', true);
+      return pushOneBon(rec);
+    }).then(function () { return todo.length; });
+  }
+
+  function bonMeta(row) {
+    return {
+      trgovina: row.trgovina || '',
+      vrednost: (row.vrednost === null || row.vrednost === undefined) ? '' : Number(row.vrednost),
+      potece: row.potece || ''
+    };
+  }
+
+  function sameBonMeta(a, b) {
+    return (a.trgovina || '') === (b.trgovina || '') &&
+           String(a.vrednost === undefined ? '' : a.vrednost) === String(b.vrednost === undefined ? '' : b.vrednost) &&
+           (a.potece || '') === (b.potece || '');
+  }
+
+  function pullBoni(local) {
+    var mine = {}, gone = tombstonesBoni();
+    local.forEach(function (r) { mine[r.id] = r; });
+
+    return rest('darilni_boni?select=id,trgovina,vrednost,potece,images&order=id.desc')
+      .then(function (res) {
+        if (!res.ok) return fail(res, 'Branje seznama bonov ni uspelo');
+        return res.json();
+      })
+      .then(function (rows) {
+        var todo = [], osvezi = [], zunaj = {};
+        rows.forEach(function (row) {
+          zunaj[row.id] = true;
+          if (gone.indexOf(row.id) >= 0) return;
+          var lokalni = mine[row.id];
+          if (!lokalni) { todo.push(row); return; }
+          if (lokalni.synced && !sameBonMeta(lokalni, bonMeta(row))) osvezi.push(row);
+        });
+
+        var izbrisani = local.filter(function (r) { return r.synced && !zunaj[r.id]; });
+
+        if (!todo.length && !osvezi.length && !izbrisani.length) return 0;
+
+        return series(izbrisani, function (r) { return DB.removeBon(r.id); }).then(function () {
+          return series(osvezi, function (row) {
+            var rec = mine[row.id], m = bonMeta(row);
+            rec.trgovina = m.trgovina;
+            rec.vrednost = m.vrednost;
+            rec.potece = m.potece;
+            return DB.addBon(rec);
+          });
+        }).then(function () {
+          return series(todo, function (row, i) {
+            status('Prenašam bon ' + (i + 1) + '/' + todo.length + '…', true);
+            var imgsMeta = row.images || [];
+            return seriesCollect(imgsMeta, function (im, idx) {
+              return Promise.all([
+                download(BUCKET_BONI, bonObjectPath(row.id, idx, false)),
+                download(BUCKET_BONI, bonObjectPath(row.id, idx, true))
+              ]).then(function (blobs) {
+                return { blob: blobs[0], thumb: blobs[1], w: im.w, h: im.h, size: im.size || blobs[0].size };
+              });
+            }).then(function (images) {
+              var m = bonMeta(row);
+              return DB.addBon({
+                id: row.id, created: row.id, synced: 1,
+                trgovina: m.trgovina, vrednost: m.vrednost, potece: m.potece,
+                images: images
+              });
+            });
+          });
+        }).then(function () { return todo.length + osvezi.length + izbrisani.length; });
+      });
+  }
+
+  function flushDeletesBoni() {
+    var gone = tombstonesBoni();
+    if (!gone.length) return Promise.resolve();
+    return series(gone, function (id) {
+      return removeBonObjects(id)
+        .then(function () { return rest('darilni_boni?id=eq.' + id, { method: 'DELETE' }); })
+        .then(function (res) { if (res.ok) dropTombstoneBoni(id); })
+        .catch(function () { /* ostane v seznamu za naslednjic */ });
+    });
+  }
+
   // ------------------------------------------------------------------ potek
   function syncNow() {
     if (!configured()) { status('Sinhronizacija ni nastavljena.', false, 'error'); return Promise.resolve(); }
@@ -405,17 +562,28 @@ window.Sync = (function () {
     return fresh().then(function (s) {
       if (!s) { status('Seja je potekla — prijavi se znova.', false, 'error'); return null; }
       return flushDeletes()
+        .then(function () { return flushDeletesBoni(); })
         .then(function () { return DB.all(); })
         .then(function (local) { return pull(local); })
         .then(function (down) {
-          return DB.all().then(function (after) {
-            return push(after).then(function (up) { return { down: down, up: up }; });
-          });
+          return DB.allBoni().then(function (localBoni) { return pullBoni(localBoni); })
+            .then(function (downBoni) {
+              return DB.all().then(function (after) {
+                return push(after).then(function (up) {
+                  return DB.allBoni().then(function (afterBoni) {
+                    return pushBoni(afterBoni).then(function (upBoni) {
+                      return { down: down + downBoni, up: up + upBoni };
+                    });
+                  });
+                });
+              });
+            });
         })
         .then(function (n) {
           if (n.down || n.up) {
             status('Sinhronizirano (↓' + n.down + ' ↑' + n.up + ').', false, 'ok');
             if (n.down && window.App) App.refreshGallery();
+            if (n.down && window.Boni) Boni.refreshGallery();
           } else {
             status('Vse je usklajeno.', false, 'ok');
           }
@@ -440,6 +608,17 @@ window.Sync = (function () {
       .catch(function () { /* poskusimo ob naslednji sinhronizaciji */ });
   }
 
+  // -------------------------------------------- kljuke, ki jih klice boni.js
+  function afterSaveBon() { return syncNow(); }
+
+  function afterDeleteBon(id) {
+    addTombstoneBoni(id);
+    if (!configured() || !session) return Promise.resolve();
+    return fresh()
+      .then(function (s) { return s ? flushDeletesBoni() : null; })
+      .catch(function () { /* poskusimo ob naslednji sinhronizaciji */ });
+  }
+
   loadSession();
 
   var Sync = {
@@ -448,6 +627,8 @@ window.Sync = (function () {
     syncNow: syncNow,
     afterSave: afterSave,
     afterDelete: afterDelete,
+    afterSaveBon: afterSaveBon,
+    afterDeleteBon: afterDeleteBon,
     session: function () { return session; },
     configured: configured,
     onStatus: null

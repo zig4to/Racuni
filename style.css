@@ -388,6 +388,9 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   display:flex;flex-direction:column;gap:14px;
 }
 .cloud-box h2{font-size:1.15rem}
+/* Sinhroniziraj/Odjava naj bosta majhna in ob vsebini, ne raztegnjena
+   čez vso širino kot .actions drugod (obrazci, potrditve strani). */
+.cloud-actions{display:flex;gap:8px}
 /* .field in .field-row sta že definirana pri obrazcu za nov račun — obrazca
    za prijavo in za pregled uporabljata isti razred, da sta polji videti enako. */
 .cloud-err{
@@ -405,13 +408,7 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   max-height:46vh;overflow:auto;flex:none;
 }
 .save-row{display:flex;align-items:center;gap:10px}
-.add-page-row{margin-bottom:16px}
-.save-status{
-  display:inline-flex;align-items:center;gap:5px;
-  font-size:.85rem;font-weight:600;color:var(--accent);
-  opacity:1;transition:opacity .4s ease;
-}
-.save-status.fade{opacity:0}
+.add-page-row{margin-bottom:16px;flex-wrap:wrap}
 .garancija{
   margin:0 0 12px;padding:10px 12px;border-radius:var(--radius-sm);
   font-size:.85rem;font-weight:600;

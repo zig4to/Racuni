@@ -15,7 +15,7 @@
    'formNew', 'fTrgovina', 'fIzdelek', 'fZnamka', 'fModel', 'fDatum', 'fGarancija', 'btnFormNext',
    'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
    'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty',
-   'saveMetaStatus', 'btnPagePrev', 'btnPageNext', 'pageIndicator', 'btnAddPageViewer',
+   'btnPagePrev', 'btnPageNext', 'pageIndicator', 'btnAddPageCamera', 'btnAddPagePicker',
    'btnManagePages', 'pagesManager',
    'btnMenu', 'menuDropdown'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
@@ -642,18 +642,18 @@
   }
 
   /* "+" v pregledovalniku — doda stran ze shranjenemu racunu (v nasprotju z
-     btnAddPage, ki dodaja strani racunu, ki se ni bil nikoli shranjen). Zajem
-     gre naravnost v kamero; ce uporabnik zeli izbrati iz galerije, lahko med
-     obrezovanjem zamenja z "Prekliči" ali kasneje znova sprozi z "+". */
-  function addPageToViewer() {
+     btnAddPage, ki dodaja strani racunu, ki se ni bil nikoli shranjen).
+     Kamera ali galerija — uporabnik izbere z enim od dveh gumbov namesto da
+     gre vedno naravnost v kamero. */
+  function addPageToViewer(method) {
     if (!state.current) return;
     state.appendTo = state.current.id;
-    /* Najprej sprozi vhod za kamero - dokler je klik se "svez" (znotraj iste
+    /* Najprej sprozi izbrani vhod - dokler je klik se "svez" (znotraj iste
        sinhronizirane uporabnikove geste), sele nato zapri pregledovalnik.
        Obratni vrstni red je na nekaterih mobilnih brskalnikih povzrocil, da
        je skrivanje pregledovalnika tik pred klicem izniclo dovoljenje za
        odprtje datotecnega/kamera izbirnika, zato gumb ni deloval. */
-    el.inputCamera.click();
+    (method === 'picker' ? el.inputPicker : el.inputCamera).click();
     closeViewer();
   }
 
@@ -680,21 +680,9 @@
   }
 
   /* Podatke se da vpisati ali popraviti tudi pozneje — racune, ki so bili
-     shranjeni, preden so ta polja obstajala, se tako dopolni za nazaj. */
-  var saveStatusTimer = null;
-
-  /* Kratka potrditev "Shranjeno" ob gumbu — brez nje ni jasno, ali je klik
-     na "Shrani podatke" sploh kaj naredil. */
-  function showSaveConfirmation() {
-    clearTimeout(saveStatusTimer);
-    el.saveMetaStatus.hidden = false;
-    el.saveMetaStatus.classList.remove('fade');
-    saveStatusTimer = setTimeout(function () {
-      el.saveMetaStatus.classList.add('fade');
-      saveStatusTimer = setTimeout(function () { el.saveMetaStatus.hidden = true; }, 400);
-    }, 2200);
-  }
-
+     shranjeni, preden so ta polja obstajala, se tako dopolni za nazaj.
+     Ob shranjevanju se pregledovalnik sam zapre — to je dovolj potrditve,
+     da je klik nekaj naredil, brez posebnega "Shranjeno" napisa. */
   function saveMeta() {
     if (!state.current) return;
     var rec = state.current, f = readFields(viewFields);
@@ -708,9 +696,8 @@
 
     el.btnSaveMeta.disabled = true;
     DB.add(rec).then(function () {
-      renderWarranty(rec);
-      showSaveConfirmation();
       if (window.Sync) Sync.afterSave();
+      closeViewer();
       return renderGallery();
     }).then(function () {
       el.btnSaveMeta.disabled = false;
@@ -818,7 +805,8 @@
     if (reopenId) openViewer(reopenId);   // nazaj v pregledovalnik, ne v golo galerijo
   });
   el.btnClose.addEventListener('click', closeViewer);
-  el.btnAddPageViewer.addEventListener('click', addPageToViewer);
+  el.btnAddPageCamera.addEventListener('click', function () { addPageToViewer('camera'); });
+  el.btnAddPagePicker.addEventListener('click', function () { addPageToViewer('picker'); });
   el.btnManagePages.addEventListener('click', togglePagesManager);
   el.btnPagePrev.addEventListener('click', prevPage);
   el.btnPageNext.addEventListener('click', nextPage);

@@ -35,11 +35,12 @@ Three globals loaded by plain `<script>` tags in `index.html`, in this order:
 
 | File | Exposes | Role |
 |---|---|---|
-| `js/db.js` | `window.DB` | IndexedDB `racuni-db` / store `slike` |
+| `js/db.js` | `window.DB` | IndexedDB `racuni-db` / stores `slike` (receipts) and `boni` (gift vouchers) |
 | `js/detect.js` | `window.Detect` | sheet detection + perspective crop |
-| `js/app.js` | `window.App` | IIFE that wires the DOM, runs on load |
-| `js/sync.js` | `window.Sync` | Supabase sync — auth, storage, push/pull. No DOM. |
-| `js/cloud.js` | (nothing) | login overlay + sync button wiring |
+| `js/app.js` | `window.App` | IIFE that wires the DOM, runs on load; also owns the header dropdown menu's open/close mechanics (`App.onMenuOpen` hooks) |
+| `js/boni.js` | `window.Boni` | gift-voucher page: capture (no detect/crop), gallery, viewer — mirrors `app.js` for the `boni` store |
+| `js/sync.js` | `window.Sync` | Supabase sync for both `racuni` and `darilni_boni` — auth, storage, push/pull. No DOM. |
+| `js/cloud.js` | (nothing) | login accordion (top of the menu) + sync button wiring |
 
 `sync.js` talks to Supabase over plain `fetch` rather than `supabase-js`, deliberately: the
 library persists its session under `sb-<ref>-auth-token`, and the calendar app (masCajt) is
@@ -87,8 +88,9 @@ by any new code touching the image(s) instead of `rec.blob` directly.
 
 The last eight (everything but `blob`/`thumb`/`w`/`h`/`size`) are additive and optional —
 IndexedDB is schemaless per record, so receipts saved before those fields existed simply lack them
-and render blank. That is why `VERSION` in `js/db.js` is still 1. Only adding an *index* would
-require bumping it and handling `onupgradeneeded`.
+and render blank. `VERSION` in `js/db.js` is 2 — bumped once, to add the `boni` object store
+alongside `slike`; `onupgradeneeded` creates whichever of the two is still missing, so upgrading
+from `VERSION` 1 leaves existing `slike` records untouched.
 
 `synced` drives sync: `0`/absent means pending upload. Editing the six purchase fields sets it
 back to `0`, and `sync.js` upserts with `Prefer: resolution=merge-duplicates` — which is why the
@@ -100,6 +102,25 @@ table only has one `w`/`h` pair (page 1's).
 
 Warranty expiry is derived, never stored: `kupljeno + garancija_let` computed in `warrantyEnd()`
 in `js/app.js`. Storing it would go stale.
+
+### DB records: darilni boni (`boni` store)
+
+`{ id, created, trgovina, vrednost, potece, images: [{blob, thumb, w, h, size}, ...], synced }`.
+Unlike receipts there is no "page 1 is special" split — `images` is always a plain array (at least
+one entry), used uniformly by both the add flow and the reorder/delete UI in `js/boni.js`. Expiry
+("days left") is derived the same way as warranty, from `potece` directly (no purchase-date math),
+in `expiryInfo()`.
+
+Sync mirrors the `racuni` pattern in `js/sync.js`, into a separate table `public.darilni_boni` and a
+separate storage bucket `boni` (see `supabase/schema.sql`) — kept apart because the record shapes
+and file-naming conventions differ enough to make sharing table/bucket more confusing than reusing
+code. File paths are `<user_id>/<id>_<index>.jpg` / `<..>_<index>_thumb.jpg` (`bonObjectPath`), and
+—unlike receipts' `extraPages`— width/height/size for every image *are* stored in Postgres, in an
+`images jsonb` column (`[{w,h,size}, ...]`), so `pull()` never needs to decode a downloaded blob just
+to recover its dimensions. `syncNow()` runs both pipelines (racuni then boni) in one pass; `Sync.
+afterSaveBon`/`afterDeleteBon` are the boni-side equivalents of `afterSave`/`afterDelete`, and
+`window.Boni.refreshGallery` is what a completed pull calls to redraw the gallery, same idea as
+`window.App.refreshGallery`.
 
 ## Tests run without a browser — and that constrains the source
 

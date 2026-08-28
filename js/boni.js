@@ -20,7 +20,7 @@
    'btnBonFormCancel', 'btnBonFormSave', 'boniEmpty', 'boniGrid',
    'boniViewer', 'btnBoniViewerClose', 'boniViewerMeta', 'boniViewerExpiry',
    'btnBoniPagePrev', 'btnBoniPageNext', 'boniViewerImg', 'boniPageIndicator',
-   'vbTrgovina', 'vbVrednost', 'vbPotece', 'btnBonAddImage', 'btnBonSaveMeta', 'bonSaveMetaStatus',
+   'vbTrgovina', 'vbVrednost', 'vbPotece', 'btnBonAddImage', 'btnBonSaveMeta',
    'btnBonManageImages', 'bonImagesManager',
    'btnBonDownload', 'btnBonDelete', 'busy', 'busyText'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
@@ -190,9 +190,11 @@
         return DB.getBon(appendTo).then(function (rec) {
           if (!rec) return;
           rec.images = rec.images.concat(imgs);
+          rec.synced = 0;
           return DB.addBon(rec).then(function () {
             state.current = rec;
             showBonPage();
+            if (window.Sync) Sync.afterSaveBon();
             return renderBoniGallery();
           });
         });
@@ -374,12 +376,14 @@
     if (to < 0 || to >= imgs.length) return;
     var item = imgs.splice(from, 1)[0];
     imgs.splice(to, 0, item);
+    state.current.synced = 0;
     DB.addBon(state.current).then(function () {
       if (state.pageIndex === from) state.pageIndex = to;
       else if (from < state.pageIndex && to >= state.pageIndex) state.pageIndex--;
       else if (from > state.pageIndex && to <= state.pageIndex) state.pageIndex++;
       showBonPage();
       renderBonImagesManager();
+      if (window.Sync) Sync.afterSaveBon();
       return renderBoniGallery();
     });
   }
@@ -389,25 +393,18 @@
     if (imgs.length <= 1) return;   // za zadnjo sliko obstaja "Izbriši" (cel bon)
     if (!confirm('Izbrišem to sliko?')) return;
     imgs.splice(i, 1);
+    state.current.synced = 0;
     DB.addBon(state.current).then(function () {
       if (state.pageIndex >= imgs.length) state.pageIndex = imgs.length - 1;
       showBonPage();
       renderBonImagesManager();
+      if (window.Sync) Sync.afterSaveBon();
       return renderBoniGallery();
     });
   }
 
-  var saveStatusTimer = null;
-  function showBonSaveConfirmation() {
-    clearTimeout(saveStatusTimer);
-    el.bonSaveMetaStatus.hidden = false;
-    el.bonSaveMetaStatus.classList.remove('fade');
-    saveStatusTimer = setTimeout(function () {
-      el.bonSaveMetaStatus.classList.add('fade');
-      saveStatusTimer = setTimeout(function () { el.bonSaveMetaStatus.hidden = true; }, 400);
-    }, 2200);
-  }
-
+  /* Ob shranjevanju se pregledovalnik sam zapre — to je dovolj potrditve, da
+     je klik nekaj naredil, brez posebnega "Shranjeno" napisa. */
   function saveBonMeta() {
     if (!state.current) return;
     var rec = state.current;
@@ -415,11 +412,12 @@
     rec.trgovina = (el.vbTrgovina.value || '').trim();
     rec.vrednost = isNaN(v) ? '' : v;
     rec.potece = el.vbPotece.value || '';
+    rec.synced = 0;   // sprememba mora se v oblak
 
     el.btnBonSaveMeta.disabled = true;
     DB.addBon(rec).then(function () {
-      renderExpiry(rec);
-      showBonSaveConfirmation();
+      if (window.Sync) Sync.afterSaveBon();
+      closeBonViewer();
       return renderBoniGallery();
     }).then(function () { el.btnBonSaveMeta.disabled = false; });
   }
@@ -429,7 +427,10 @@
     if (!confirm('Izbrišem ta darilni bon?')) return;
     var id = state.current.id;
     closeBonViewer();
-    DB.removeBon(id).then(renderBoniGallery);
+    DB.removeBon(id).then(function () {
+      if (window.Sync) Sync.afterDeleteBon(id);
+      return renderBoniGallery();
+    });
   }
 
   function bonFileName(rec, idx) {
@@ -511,6 +512,7 @@
     el.btnBonFormSave.disabled = true;
     DB.addBon(rec).then(function () {
       resetBonForm();
+      if (window.Sync) Sync.afterSaveBon();
       return renderBoniGallery();
     }).catch(function (err) {
       alert('Shranjevanje ni uspelo: ' + (err.message || err));
@@ -531,4 +533,8 @@
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' && !el.boniViewer.hidden) closeBonViewer();
   });
+
+  /* Majhna povrsina za js/sync.js, da po prenosu iz oblaka osvezi galerijo
+     bonov — enak vzorec kot window.App.refreshGallery za racune. */
+  window.Boni = { refreshGallery: renderBoniGallery };
 })();

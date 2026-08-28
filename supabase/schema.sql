@@ -104,3 +104,75 @@ create policy "racuni_files_delete_own" on storage.objects
     bucket_id = 'racuni' and (storage.foldername(name))[1] = auth.uid()::text
   );
 
+-- ============================================================ darilni boni
+-- Ločena tabela in ločeno vedro od računov — darilni boni imajo drugačna
+-- polja (vrednost, datum poteka) in poljubno število enakovrednih slik
+-- (brez posebne "prve strani" kot pri računih), zato je preprosteje, da
+-- ostanejo povsem svoja zbirka.
+create table if not exists public.darilni_boni (
+  id        bigint primary key,               -- Date.now(), enak kot v IndexedDB
+  user_id   uuid        not null references auth.users(id) on delete cascade,
+  created   timestamptz not null default now(),
+  trgovina  text,
+  vrednost  numeric(10,2),
+  potece    date,
+  -- Ena vrstica na sliko: [{w,h,size}, ...] — v istem vrstnem redu, kot so
+  -- prikazane. Poti niso shranjene, so izpeljane iz id-ja in indeksa (glej
+  -- bonObjectPath v js/sync.js): <user_id>/<id>_<i>.jpg in <..>_<i>_thumb.jpg.
+  images    jsonb       not null default '[]'::jsonb
+);
+
+create index if not exists darilni_boni_user_created_idx
+  on public.darilni_boni (user_id, created desc);
+
+alter table public.darilni_boni enable row level security;
+
+grant select, insert, update, delete on table public.darilni_boni to authenticated;
+
+drop policy if exists "darilni_boni_select_own" on public.darilni_boni;
+create policy "darilni_boni_select_own" on public.darilni_boni
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "darilni_boni_insert_own" on public.darilni_boni;
+create policy "darilni_boni_insert_own" on public.darilni_boni
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "darilni_boni_update_own" on public.darilni_boni;
+create policy "darilni_boni_update_own" on public.darilni_boni
+  for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+drop policy if exists "darilni_boni_delete_own" on public.darilni_boni;
+create policy "darilni_boni_delete_own" on public.darilni_boni
+  for delete using (auth.uid() = user_id);
+
+-- -------------------------------------------------------------------- shramba
+insert into storage.buckets (id, name, public)
+values ('boni', 'boni', false)
+on conflict (id) do nothing;
+
+drop policy if exists "boni_files_select_own" on storage.objects;
+create policy "boni_files_select_own" on storage.objects
+  for select using (
+    bucket_id = 'boni' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "boni_files_insert_own" on storage.objects;
+create policy "boni_files_insert_own" on storage.objects
+  for insert with check (
+    bucket_id = 'boni' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "boni_files_update_own" on storage.objects;
+create policy "boni_files_update_own" on storage.objects
+  for update using (
+    bucket_id = 'boni' and (storage.foldername(name))[1] = auth.uid()::text
+  ) with check (
+    bucket_id = 'boni' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+
+drop policy if exists "boni_files_delete_own" on storage.objects;
+create policy "boni_files_delete_own" on storage.objects
+  for delete using (
+    bucket_id = 'boni' and (storage.foldername(name))[1] = auth.uid()::text
+  );
+

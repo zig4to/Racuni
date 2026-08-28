@@ -67,9 +67,15 @@
             <div id="cloudAccount" hidden>
               <p class="muted">Prijavljen kot <span id="cloudEmailShown"></span></p>
               <span id="cloudStatus" class="muted"></span>
-              <div class="actions">
-                <button id="btnCloudSync" class="btn btn-primary">↻ Sinhroniziraj zdaj</button>
-                <button id="btnCloudLogout" class="btn">Odjava</button>
+              <div class="cloud-actions">
+                <button id="btnCloudSync" class="btn btn-sm btn-primary">↻ Sinhr.</button>
+                <button id="btnCloudLogout" class="btn btn-sm">
+                  <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                    <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M16 8l4 4-4 4M20 12H9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                  Odjava
+                </button>
               </div>
               <p class="muted">Odjava ne izbriše računov na tej napravi.</p>
             </div>
@@ -304,12 +310,6 @@
     <div id="bonImagesManager" class="pages-manager" hidden></div>
     <div class="save-row">
       <button id="btnBonSaveMeta" class="btn btn-sm btn-bon">💾 Shrani podatke</button>
-      <span id="bonSaveMetaStatus" class="save-status" hidden>
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-          <path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Shranjeno
-      </span>
     </div>
   </div>
 
@@ -375,18 +375,13 @@
       </div>
     </div>
     <div class="save-row add-page-row">
-      <button id="btnAddPageViewer" type="button" class="btn btn-sm" title="Dodaj sliko temu računu">📷 Dodaj sliko</button>
+      <button id="btnAddPageCamera" type="button" class="btn btn-sm" title="Slikaj novo stran">📷 Kamera</button>
+      <button id="btnAddPagePicker" type="button" class="btn btn-sm" title="Izberi sliko iz galerije">🖼️ Galerija</button>
       <button id="btnManagePages" type="button" class="btn btn-sm" title="Uredi vrstni red ali izbriši strani" hidden>☰ Uredi strani</button>
     </div>
     <div id="pagesManager" class="pages-manager" hidden></div>
     <div class="save-row">
       <button id="btnSaveMeta" class="btn btn-sm btn-primary">💾 Shrani podatke</button>
-      <span id="saveMetaStatus" class="save-status" hidden>
-        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-          <path d="M4 12.5 9.5 18 20 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-        Shranjeno
-      </span>
     </div>
   </div>
 
