@@ -188,6 +188,29 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   background:rgba(12,15,20,.78);border:1px solid rgba(255,255,255,.15);color:#fff;
   font-size:.85rem;line-height:1;cursor:pointer;
 }
+
+/* ---------- pregledovalnik: urejanje vrstnega reda strani/slik ---------- */
+.pages-manager{display:flex;flex-direction:column;gap:8px;margin:0 0 16px}
+.manage-row{
+  display:flex;align-items:center;gap:10px;
+  background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius-sm);
+  padding:7px 8px;
+}
+.manage-row img{width:48px;height:48px;object-fit:cover;border-radius:8px;flex:none;display:block}
+.manage-row-label{flex:1;font-size:.78rem;color:var(--muted);min-width:0}
+.manage-row-actions{display:flex;gap:5px;flex:none}
+.manage-row-actions button{
+  width:30px;height:30px;border-radius:8px;padding:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+  font-size:1rem;line-height:1;cursor:pointer;
+}
+.manage-row-actions button:disabled{opacity:.3;cursor:not-allowed}
+.manage-row-actions button.manage-delete{color:var(--danger)}
+@media (hover:hover){
+  .manage-row-actions button:not(:disabled):hover{border-color:var(--accent-2)}
+  .manage-row-actions button.manage-delete:not(:disabled):hover{border-color:var(--danger-line);background:rgba(248,113,113,.1)}
+}
 .field label{font-size:.8rem;font-weight:600;color:var(--muted)}
 .field input{
   width:100%;appearance:none;-webkit-appearance:none;

@@ -21,6 +21,7 @@
    'boniViewer', 'btnBoniViewerClose', 'boniViewerMeta', 'boniViewerExpiry',
    'btnBoniPagePrev', 'btnBoniPageNext', 'boniViewerImg', 'boniPageIndicator',
    'vbTrgovina', 'vbVrednost', 'vbPotece', 'btnBonAddImage', 'btnBonSaveMeta', 'bonSaveMetaStatus',
+   'btnBonManageImages', 'bonImagesManager',
    'btnBonDownload', 'btnBonDelete', 'busy', 'busyText'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
@@ -299,6 +300,11 @@
       el.btnBoniPagePrev.disabled = state.pageIndex === 0;
       el.btnBoniPageNext.disabled = state.pageIndex === imgs.length - 1;
     }
+
+    // Urejanje vrstnega reda/brisanje posameznih slik je smiselno le, ko jih je več.
+    el.btnBonManageImages.hidden = !multi;
+    if (!multi) el.bonImagesManager.hidden = true;
+    else if (!el.bonImagesManager.hidden) renderBonImagesManager();
   }
 
   function prevBonPage() { if (state.pageIndex > 0) { state.pageIndex--; showBonPage(); } }
@@ -309,6 +315,86 @@
     el.boniViewerImg.removeAttribute('src');
     if (state.objectUrl) { URL.revokeObjectURL(state.objectUrl); state.objectUrl = null; }
     state.current = null;
+    el.bonImagesManager.hidden = true;
+  }
+
+  /* Seznam vseh slik z gumbi za premik (‹/›) in izbris — enaka logika kot pri
+     straneh računov (js/app.js), le da je rec.images že enoten seznam. */
+  function renderBonImagesManager() {
+    var imgs = state.current.images;
+    el.bonImagesManager.innerHTML = '';
+
+    imgs.forEach(function (im, i) {
+      var row = document.createElement('div');
+      row.className = 'manage-row';
+
+      var thumb = document.createElement('img');
+      thumb.src = URL.createObjectURL(im.thumb);
+      thumb.onload = function () { URL.revokeObjectURL(thumb.src); };
+      row.appendChild(thumb);
+
+      var label = document.createElement('div');
+      label.className = 'manage-row-label';
+      label.textContent = 'Slika ' + (i + 1) + ' / ' + imgs.length;
+      row.appendChild(label);
+
+      var actions = document.createElement('div');
+      actions.className = 'manage-row-actions';
+
+      var prev = document.createElement('button');
+      prev.type = 'button'; prev.textContent = '‹'; prev.title = 'Premakni prej';
+      prev.disabled = i === 0;
+      prev.addEventListener('click', function () { moveBonImage(i, i - 1); });
+      actions.appendChild(prev);
+
+      var next = document.createElement('button');
+      next.type = 'button'; next.textContent = '›'; next.title = 'Premakni kasneje';
+      next.disabled = i === imgs.length - 1;
+      next.addEventListener('click', function () { moveBonImage(i, i + 1); });
+      actions.appendChild(next);
+
+      var del = document.createElement('button');
+      del.type = 'button'; del.className = 'manage-delete'; del.textContent = '✕'; del.title = 'Izbriši sliko';
+      del.disabled = imgs.length <= 1;
+      del.addEventListener('click', function () { deleteBonImage(i); });
+      actions.appendChild(del);
+
+      row.appendChild(actions);
+      el.bonImagesManager.appendChild(row);
+    });
+  }
+
+  function toggleBonImagesManager() {
+    el.bonImagesManager.hidden = !el.bonImagesManager.hidden;
+    if (!el.bonImagesManager.hidden) renderBonImagesManager();
+  }
+
+  function moveBonImage(from, to) {
+    var imgs = state.current.images;
+    if (to < 0 || to >= imgs.length) return;
+    var item = imgs.splice(from, 1)[0];
+    imgs.splice(to, 0, item);
+    DB.addBon(state.current).then(function () {
+      if (state.pageIndex === from) state.pageIndex = to;
+      else if (from < state.pageIndex && to >= state.pageIndex) state.pageIndex--;
+      else if (from > state.pageIndex && to <= state.pageIndex) state.pageIndex++;
+      showBonPage();
+      renderBonImagesManager();
+      return renderBoniGallery();
+    });
+  }
+
+  function deleteBonImage(i) {
+    var imgs = state.current.images;
+    if (imgs.length <= 1) return;   // za zadnjo sliko obstaja "Izbriši" (cel bon)
+    if (!confirm('Izbrišem to sliko?')) return;
+    imgs.splice(i, 1);
+    DB.addBon(state.current).then(function () {
+      if (state.pageIndex >= imgs.length) state.pageIndex = imgs.length - 1;
+      showBonPage();
+      renderBonImagesManager();
+      return renderBoniGallery();
+    });
   }
 
   var saveStatusTimer = null;
@@ -438,6 +524,7 @@
     state.addTarget = state.current ? state.current.id : null;
     el.inputBonImages.click();
   });
+  el.btnBonManageImages.addEventListener('click', toggleBonImagesManager);
   el.btnBonSaveMeta.addEventListener('click', saveBonMeta);
   el.btnBonDownload.addEventListener('click', downloadBon);
   el.btnBonDelete.addEventListener('click', removeBon);

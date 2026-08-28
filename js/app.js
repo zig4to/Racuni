@@ -16,6 +16,7 @@
    'btnFormCancel', 'captureRow', 'btnCamera', 'btnPicker', 'searchInput', 'searchEmpty',
    'vTrgovina', 'vIzdelek', 'vZnamka', 'vModel', 'vDatum', 'vGarancija', 'btnSaveMeta', 'viewerWarranty',
    'saveMetaStatus', 'btnPagePrev', 'btnPageNext', 'pageIndicator', 'btnAddPageViewer',
+   'btnManagePages', 'pagesManager',
    'btnMenu', 'menuDropdown'
   ].forEach(function (id) { el[id] = document.getElementById(id); });
 
@@ -67,6 +68,16 @@
   function pagesOf(rec) {
     var first = { blob: rec.blob, thumb: rec.thumb, w: rec.w, h: rec.h, size: rec.size };
     return (rec.extraPages && rec.extraPages.length) ? [first].concat(rec.extraPages) : [first];
+  }
+
+  /* Obratno od pagesOf: zapiše preurejen/skrajšan seznam nazaj v rec, prva
+     stran spet postane rec.blob/thumb/w/h/size, ostale rec.extraPages —
+     uporabljata ga movePage in deletePage. */
+  function setPages(rec, pages) {
+    var first = pages[0];
+    rec.blob = first.blob; rec.thumb = first.thumb; rec.w = first.w; rec.h = first.h; rec.size = first.size;
+    if (pages.length > 1) rec.extraPages = pages.slice(1);
+    else delete rec.extraPages;
   }
 
   function makeThumb(canvas) {
@@ -521,6 +532,11 @@
       el.btnPagePrev.disabled = state.pageIndex === 0;
       el.btnPageNext.disabled = state.pageIndex === pages.length - 1;
     }
+
+    // Urejanje vrstnega reda/brisanje posameznih strani je smiselno le pri več straneh.
+    el.btnManagePages.hidden = !multi;
+    if (!multi) el.pagesManager.hidden = true;
+    else if (!el.pagesManager.hidden) renderPagesManager();
   }
 
   function prevPage() {
@@ -536,6 +552,93 @@
     el.viewerImg.removeAttribute('src');
     if (state.objectUrl) { URL.revokeObjectURL(state.objectUrl); state.objectUrl = null; }
     state.current = null;
+    el.pagesManager.hidden = true;
+  }
+
+  /* Seznam vseh strani z gumbi za premik (‹/›) in izbris — prva/zadnja stran
+     ustrezno onemogočita premik v to smer, izbris pa je onemogočen, če je
+     stran ena sama (za to obstaja "Izbriši" v spodnjem meniju za cel račun). */
+  function renderPagesManager() {
+    var pages = pagesOf(state.current);
+    el.pagesManager.innerHTML = '';
+
+    pages.forEach(function (p, i) {
+      var row = document.createElement('div');
+      row.className = 'manage-row';
+
+      var img = document.createElement('img');
+      img.src = URL.createObjectURL(p.thumb);
+      img.onload = function () { URL.revokeObjectURL(img.src); };
+      row.appendChild(img);
+
+      var label = document.createElement('div');
+      label.className = 'manage-row-label';
+      label.textContent = 'Stran ' + (i + 1) + ' / ' + pages.length;
+      row.appendChild(label);
+
+      var actions = document.createElement('div');
+      actions.className = 'manage-row-actions';
+
+      var prev = document.createElement('button');
+      prev.type = 'button'; prev.textContent = '‹'; prev.title = 'Premakni prej';
+      prev.disabled = i === 0;
+      prev.addEventListener('click', function () { movePage(i, i - 1); });
+      actions.appendChild(prev);
+
+      var next = document.createElement('button');
+      next.type = 'button'; next.textContent = '›'; next.title = 'Premakni kasneje';
+      next.disabled = i === pages.length - 1;
+      next.addEventListener('click', function () { movePage(i, i + 1); });
+      actions.appendChild(next);
+
+      var del = document.createElement('button');
+      del.type = 'button'; del.className = 'manage-delete'; del.textContent = '✕'; del.title = 'Izbriši stran';
+      del.disabled = pages.length <= 1;
+      del.addEventListener('click', function () { deletePage(i); });
+      actions.appendChild(del);
+
+      row.appendChild(actions);
+      el.pagesManager.appendChild(row);
+    });
+  }
+
+  function togglePagesManager() {
+    el.pagesManager.hidden = !el.pagesManager.hidden;
+    if (!el.pagesManager.hidden) renderPagesManager();
+  }
+
+  function movePage(from, to) {
+    var pages = pagesOf(state.current);
+    if (to < 0 || to >= pages.length) return;
+    var item = pages.splice(from, 1)[0];
+    pages.splice(to, 0, item);
+    setPages(state.current, pages);
+    state.current.synced = 0;
+    DB.add(state.current).then(function () {
+      if (state.pageIndex === from) state.pageIndex = to;
+      else if (from < state.pageIndex && to >= state.pageIndex) state.pageIndex--;
+      else if (from > state.pageIndex && to <= state.pageIndex) state.pageIndex++;
+      showViewerPage();
+      renderPagesManager();
+      if (window.Sync) Sync.afterSave();
+      return renderGallery();
+    });
+  }
+
+  function deletePage(i) {
+    var pages = pagesOf(state.current);
+    if (pages.length <= 1) return;   // za zadnjo stran obstaja "Izbriši" (cel racun)
+    if (!confirm('Izbrišem to stran?')) return;
+    pages.splice(i, 1);
+    setPages(state.current, pages);
+    state.current.synced = 0;
+    DB.add(state.current).then(function () {
+      if (state.pageIndex >= pages.length) state.pageIndex = pages.length - 1;
+      showViewerPage();
+      renderPagesManager();
+      if (window.Sync) Sync.afterSave();
+      return renderGallery();
+    });
   }
 
   /* "+" v pregledovalniku — doda stran ze shranjenemu racunu (v nasprotju z
@@ -716,6 +819,7 @@
   });
   el.btnClose.addEventListener('click', closeViewer);
   el.btnAddPageViewer.addEventListener('click', addPageToViewer);
+  el.btnManagePages.addEventListener('click', togglePagesManager);
   el.btnPagePrev.addEventListener('click', prevPage);
   el.btnPageNext.addEventListener('click', nextPage);
   el.btnDownload.addEventListener('click', download);

@@ -1,6 +1,6 @@
 /* Predpomnilnik lupine aplikacije, da deluje tudi brez povezave.
    Ob spremembi datotek povečaj VERSION. */
-var VERSION = 'racuni-v31';
+var VERSION = 'racuni-v32';
 var SHELL = [
   './', './index.html', './style.css', './icon.svg', './manifest.json',
   './js/db.js', './js/detect.js', './js/app.js', './js/boni.js', './js/sync.js', './js/cloud.js',
