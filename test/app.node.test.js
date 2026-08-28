@@ -272,7 +272,10 @@ function quadPoints() {
   check('ročice postavljene na vogale',
         handles.every(function (h) { return h.style.left && h.style.top; }),
         handles[0].style.left + ' / ' + handles[0].style.top);
-  check('senčenje okoli izreza narisano', /^M0,0 H900 V1200 H0 Z M/.test(el.shade.getAttribute('d')));
+  /* Zunanji pravokotnik sega tudi v belo polje okoli slike (CROP_MARGIN = 0.5
+     pri MIN_ZOOM 0.5 v app.js) — pri 900x1200 torej 450/600 čez rob. */
+  check('senčenje okoli izreza narisano', /^M-450\.0,-600\.0 H1350\.0 V1800\.0 H-450\.0 Z M/.test(el.shade.getAttribute('d')),
+        el.shade.getAttribute('d'));
 
   console.log('\n--- ročni popravek vogala ---');
   el.preview._dispW = 900; el.preview._dispH = 1200;   // prikaz 1:1 za enostavno preverbo
@@ -283,10 +286,14 @@ function quadPoints() {
   check('vlečenje vogala premakne okvir', Math.abs(moved[0] - 300) < 1 && Math.abs(moved[1] - 200) < 1,
         'vogal -> ' + moved);
   handles[0].dispatch('pointerdown', { pointerId: 1, currentTarget: handles[0] });
-  handles[0].dispatch('pointermove', { clientX: -500, clientY: -500 });   // izven slike
+  handles[0].dispatch('pointermove', { clientX: -500, clientY: -500 });   // precej izven slike
   handles[0].dispatch('pointerup', {});
   var clamped = quadPoints()[0];
-  check('vogal ostane znotraj slike', clamped[0] >= 0 && clamped[1] >= 0, 'vogal -> ' + clamped);
+  /* Vogal SME segati izven slike (v belo polje ob njej — glej CROP_MARGIN v
+     app.js), a ne dlje kot pri 900x1200 do -450/-600. */
+  check('vogal lahko izven slike, a omejen na belo polje ob njej',
+        clamped[0] < 0 && clamped[0] >= -450.01 && clamped[1] < 0 && clamped[1] >= -600.01,
+        'vogal -> ' + clamped);
 
   el.btnReset.dispatch('click');            // ponovna zaznava povrne pravi okvir
   await tick(10);

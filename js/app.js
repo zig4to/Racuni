@@ -255,8 +255,15 @@
     var w = state.work.width, h = state.work.height, q = state.corners;
     var poly = q.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' ');
     el.quad.setAttribute('points', poly);
+
+    /* Zunanji pravokotnik sega tudi v belo polje okoli slike (glej
+       CROP_MARGIN) — brez tega bi "evenodd" del vogala, povlečen tja,
+       narobe prikazal kot zasenčen namesto jasen (obratno od pomena
+       znotraj/zunaj izreza povsod drugod na fotografiji). */
+    var mx = w * CROP_MARGIN, my = h * CROP_MARGIN;
     el.shade.setAttribute('d',
-      'M0,0 H' + w + ' V' + h + ' H0 Z ' +
+      'M' + (-mx).toFixed(1) + ',' + (-my).toFixed(1) +
+      ' H' + (w + mx).toFixed(1) + ' V' + (h + my).toFixed(1) + ' H' + (-mx).toFixed(1) + ' Z ' +
       'M' + q.map(function (p) { return p[0].toFixed(1) + ',' + p[1].toFixed(1); }).join(' L') + ' Z');
 
     handles.forEach(function (hEl, i) {
@@ -274,9 +281,15 @@
       var r = el.preview.getBoundingClientRect();
       var x = (ev.clientX - r.left) / r.width * state.work.width;
       var y = (ev.clientY - r.top) / r.height * state.work.height;
+      /* Ko je slika oddaljena (glej "povečava odra" spodaj) je vidno tudi
+         belo polje okoli nje — dovolimo, da vogal seže vanj, natanko tako
+         daleč, kot ta rob sploh lahko seže pri najmanjši povečavi (glej
+         CROP_MARGIN); Detect.crop robne slikovne pike izven slike itak samo
+         ponovi (glej klešč v detect.js), zato izven-obmocno oglišče ne pade. */
+      var mx = state.work.width * CROP_MARGIN, my = state.work.height * CROP_MARGIN;
       state.corners[i] = [
-        Math.max(0, Math.min(state.work.width, x)),
-        Math.max(0, Math.min(state.work.height, y))
+        Math.max(-mx, Math.min(state.work.width + mx, x)),
+        Math.max(-my, Math.min(state.work.height + my, y))
       ];
       updateOverlay();
     }
@@ -303,6 +316,13 @@
      bere getBoundingClientRect() sproti, ki že upošteva trenutno preoblikovanje. */
   var zoom = { scale: 1, x: 0, y: 0 };
   var MIN_ZOOM = 0.5, MAX_ZOOM = 4;
+  /* Kako daleč (kot delež širine/višine slike) sme vogal segati izven nje —
+     natanko toliko, kot pri MIN_ZOOM sploh lahko seže belo polje, ki ga
+     clampPan spodaj takrat pokaže. Izpeljano iz razmerja med lokalnim
+     (nepreoblikovanim) položajem ročice in njeno končno (preoblikovano)
+     zaslonsko lego: pri sredinjenju ob MIN_ZOOM je rob vidnega belega polja
+     natanko pri deležu (1-MIN_ZOOM)/(2*MIN_ZOOM) izven slike. */
+  var CROP_MARGIN = (1 - MIN_ZOOM) / (2 * MIN_ZOOM);
 
   function applyZoom() {
     el.stage.style.transform = 'translate(' + zoom.x + 'px,' + zoom.y + 'px) scale(' + zoom.scale + ')';
