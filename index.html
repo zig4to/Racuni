@@ -44,6 +44,7 @@
               <path d="M5 20c0-3.6 3.1-6.2 7-6.2s7 2.6 7 6.2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
             </svg>
             <span id="cloudToggleLabel">Prijava</span>
+            <span id="cloudStatus" class="menu-sync-status muted"></span>
           </button>
           <div id="cloudBox" class="cloud-box" hidden>
             <div id="cloudLogin">
@@ -66,9 +67,8 @@
 
             <div id="cloudAccount" hidden>
               <p class="muted">Prijavljen kot <span id="cloudEmailShown"></span></p>
-              <span id="cloudStatus" class="muted"></span>
               <div class="cloud-actions">
-                <button id="btnCloudSync" class="btn btn-sm btn-primary">↻ Sinhr.</button>
+                <button id="btnCloudSync" class="btn btn-sm btn-primary">↻ Sinhronizacija</button>
                 <button id="btnCloudLogout" class="btn btn-sm">
                   <svg class="btn-icon" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                     <path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
@@ -205,6 +205,10 @@
       <label class="check"><input id="enhance" type="checkbox" checked> Posvetli / poravnaj barve</label>
       <button id="btnRotate" class="btn btn-sm">↻ Zavrti</button>
       <button id="btnReset" class="btn btn-sm">⟲ Ponovna zaznava</button>
+      <span class="zoom-group">
+        <button id="btnZoomOut" type="button" class="btn btn-sm" title="Oddalji">−</button>
+        <button id="btnZoomIn" type="button" class="btn btn-sm" title="Približaj">+</button>
+      </span>
     </div>
 
     <div class="actions">

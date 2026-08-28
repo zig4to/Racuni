@@ -9,7 +9,8 @@
 
   var el = {};
   ['inputCamera', 'inputPicker', 'viewGallery', 'viewEdit', 'grid', 'emptyState',
-   'preview', 'overlay', 'shade', 'quad', 'stage', 'hint', 'enhance', 'btnRotate',
+   'preview', 'overlay', 'shade', 'quad', 'stage', 'stageWrap', 'hint', 'enhance', 'btnRotate',
+   'btnZoomIn', 'btnZoomOut',
    'btnReset', 'btnCancel', 'btnCrop', 'btnAddPage', 'viewer', 'viewerImg', 'viewerMeta', 'btnClose',
    'btnDownload', 'btnShare', 'btnDelete', 'busy', 'busyText', 'storageInfo', 'btnRefresh',
    'formNew', 'fTrgovina', 'fIzdelek', 'fZnamka', 'fModel', 'fDatum', 'fGarancija', 'btnFormNext',
@@ -241,6 +242,7 @@
     c.getContext('2d').drawImage(state.work, 0, 0);
     el.overlay.setAttribute('viewBox', '0 0 ' + w + ' ' + h);
     updateOverlay();
+    resetZoom();   // vsaka nova slika/stran se zacne nepovecana
   }
 
   function updateOverlay() {
@@ -284,6 +286,135 @@
     e.preventDefault();
   }
   handles.forEach(function (h) { h.addEventListener('pointerdown', startDrag); });
+
+  // ----------------------------------------------------------- povečava odra
+  /* Slika (in z njo vogali/ročice, ki so vsi znotraj .stage) se lahko približa
+     čez svojo naravno velikost — za natančnejše postavljanje vogalov na drobn
+     tisk ali kote slabo vidnega računa. .handle ročice ostanejo pravilno
+     poravnane brez posebne obravnave: pozicionirane so v % glede na .stage,
+     .stage pa se povečuje/premika kot celota (transform), zato se z njim
+     premakne tudi njihova nadrejena škatla. Prav tako drag v startDrag zgoraj
+     bere getBoundingClientRect() sproti, ki že upošteva trenutno preoblikovanje. */
+  var zoom = { scale: 1, x: 0, y: 0 };
+  var MIN_ZOOM = 1, MAX_ZOOM = 4;
+
+  function applyZoom() {
+    el.stage.style.transform = 'translate(' + zoom.x + 'px,' + zoom.y + 'px) scale(' + zoom.scale + ')';
+  }
+
+  function resetZoom() {
+    zoom.scale = 1; zoom.x = 0; zoom.y = 0;
+    applyZoom();
+  }
+
+  /* Zapre razpon povečave na .stage-evo lastno (nepreoblikovano) velikost —
+     samo-referenčno, da se izognemo neusklajenosti z okvirjem .stage-wrap
+     (ta ob sredinjenju z flex ni nujno enako širok kot .stage). */
+  function clampPan() {
+    if (zoom.scale <= 1.001) { zoom.scale = 1; zoom.x = 0; zoom.y = 0; return; }
+    var naturalW = el.stage.offsetWidth, naturalH = el.stage.offsetHeight;
+    var scaledW = naturalW * zoom.scale, scaledH = naturalH * zoom.scale;
+    zoom.x = Math.max(naturalW - scaledW, Math.min(0, zoom.x));
+    zoom.y = Math.max(naturalH - scaledH, Math.min(0, zoom.y));
+  }
+
+  /* Poveča/pomanjša okoli točke (clientX, clientY) — ista vsebinska točka
+     ostane pod kazalcem/prstom po spremembi, namesto da povečava "skoči". */
+  function zoomAt(clientX, clientY, factor) {
+    var rect = el.stage.getBoundingClientRect();
+    var newScale = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, zoom.scale * factor));
+    if (newScale === zoom.scale) return;
+
+    var localX = (clientX - rect.left) / zoom.scale;
+    var localY = (clientY - rect.top) / zoom.scale;
+    zoom.x -= localX * (newScale - zoom.scale);
+    zoom.y -= localY * (newScale - zoom.scale);
+    zoom.scale = newScale;
+    clampPan();
+    applyZoom();
+  }
+
+  el.btnZoomIn.addEventListener('click', function () {
+    var r = el.stage.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.4);
+  });
+  el.btnZoomOut.addEventListener('click', function () {
+    var r = el.stage.getBoundingClientRect();
+    zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1 / 1.4);
+  });
+
+  el.stageWrap.addEventListener('wheel', function (e) {
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.15 : 1 / 1.15);
+  }, { passive: false });
+
+  /* Eno-prstno/miškino premikanje povečane slike — le kadar prst/klik ni
+     začel na ročici za oglišče (tista ima svoj startDrag zgoraj) in je slika
+     dejansko povečana (sicer ni kam premikati). */
+  var panState = null;
+  el.stage.addEventListener('pointerdown', function (e) {
+    if (e.target.closest && e.target.closest('.handle')) return;
+    if (zoom.scale <= 1.001) return;
+    panState = { id: e.pointerId, startX: e.clientX, startY: e.clientY, origX: zoom.x, origY: zoom.y };
+    el.stage.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  el.stage.addEventListener('pointermove', function (e) {
+    if (!panState || e.pointerId !== panState.id) return;
+    zoom.x = panState.origX + (e.clientX - panState.startX);
+    zoom.y = panState.origY + (e.clientY - panState.startY);
+    clampPan();
+    applyZoom();
+  });
+  ['pointerup', 'pointercancel'].forEach(function (t) {
+    el.stage.addEventListener(t, function (e) {
+      if (panState && e.pointerId === panState.id) panState = null;
+    });
+  });
+
+  /* Ščipanje z dvema prstoma — sledimo dvema aktivnima dotikoma in iz razlike
+     v razdalji med njima izpeljemo faktor povečave, iz njune sredine pa
+     točko, okoli katere naj se poveča (glej zoomAt). Ostale (tretje, ...)
+     dotike prezremo. */
+  var pinch = null;   // { ids:[a,b], points:{id:{x,y}}, startDist }
+  function pinchPoints() {
+    var ids = pinch.ids, a = pinch.points[ids[0]], b = pinch.points[ids[1]];
+    return { dist: Math.hypot(b.x - a.x, b.y - a.y), midX: (a.x + b.x) / 2, midY: (a.y + b.y) / 2 };
+  }
+  el.stage.addEventListener('pointerdown', function (e) {
+    if (e.pointerType !== 'touch') return;
+    if (e.target.closest && e.target.closest('.handle')) return;
+    if (!pinch) pinch = { ids: [], points: {} };
+    if (pinch.ids.indexOf(e.pointerId) < 0 && pinch.ids.length < 2) {
+      pinch.ids.push(e.pointerId);
+      pinch.points[e.pointerId] = { x: e.clientX, y: e.clientY };
+    }
+    if (pinch.ids.length === 2) {
+      panState = null;   // ne meses eno-prstnega premikanja z ščipanjem
+      pinch.startDist = pinchPoints().dist;
+      pinch.startScale = zoom.scale;
+    }
+  });
+  el.stage.addEventListener('pointermove', function (e) {
+    if (!pinch || pinch.ids.indexOf(e.pointerId) < 0) return;
+    pinch.points[e.pointerId] = { x: e.clientX, y: e.clientY };
+    if (pinch.ids.length !== 2 || !pinch.startDist) return;
+    var p = pinchPoints();
+    if (p.dist < 1) return;
+    var factor = (pinch.startScale * (p.dist / pinch.startDist)) / zoom.scale;
+    zoomAt(p.midX, p.midY, factor);
+  });
+  ['pointerup', 'pointercancel'].forEach(function (t) {
+    el.stage.addEventListener(t, function (e) {
+      if (!pinch) return;
+      var i = pinch.ids.indexOf(e.pointerId);
+      if (i < 0) return;
+      pinch.ids.splice(i, 1);
+      delete pinch.points[e.pointerId];
+      if (pinch.ids.length < 2) { pinch.startDist = null; }
+      if (!pinch.ids.length) pinch = null;
+    });
+  });
 
   function rotate90() {
     var src = state.work;

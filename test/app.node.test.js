@@ -246,7 +246,7 @@ function quadPoints() {
   /* Nadomestek getElementById zabeleži samo ID-je, ki v index.html res
      obstajajo, zato je to število hkrati preverba, da se vsi razrešijo.
      Ob dodajanju elementa v app.js je treba popraviti tudi to pričakovanje. */
-  check('vsi ID-ji iz app.js obstajajo v index.html', Object.keys(el).length === 60,
+  check('vsi ID-ji iz app.js obstajajo v index.html', Object.keys(el).length === 63,
         '(' + Object.keys(el).length + '/56)');
   check('gumbi imajo pripete poslušalce',
         el.btnCrop.hasListener('click') && el.btnCancel.hasListener('click') &&
