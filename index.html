@@ -16,6 +16,7 @@
 <meta name="apple-mobile-web-app-title" content="Računi">
 <meta name="application-name" content="Računi">
 <link rel="stylesheet" href="style.css">
+<script src="js/theme.js"></script>
 </head>
 <body>
 
@@ -92,6 +93,26 @@
           </svg>
           <span>Darilni boni</span>
         </button>
+        <hr class="menu-divider">
+        <div id="settingsMenuSection">
+          <button id="btnSettingsToggle" class="menu-item" type="button" aria-haspopup="true" aria-expanded="false">
+            <svg class="menu-item-icon" viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="3.2" stroke="currentColor" stroke-width="1.7"/>
+              <path d="M12 3.4v2.2M12 18.4v2.2M4.6 7.6l1.9 1.1M17.5 15.3l1.9 1.1M4.6 16.4l1.9-1.1M17.5 8.7l1.9-1.1M3.4 12h2.2M18.4 12h2.2" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+            </svg>
+            <span>Nastavitve</span>
+          </button>
+          <div id="settingsBox" class="cloud-box" hidden>
+            <div class="field">
+              <label>Tema</label>
+              <div class="seg" role="group" aria-label="Tema">
+                <button type="button" class="seg-btn" data-theme-choice="sistem" aria-pressed="false">Sistemska</button>
+                <button type="button" class="seg-btn" data-theme-choice="svetla" aria-pressed="false">Svetla</button>
+                <button type="button" class="seg-btn" data-theme-choice="temna" aria-pressed="false">Temna</button>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>

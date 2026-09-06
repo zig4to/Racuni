@@ -82,6 +82,14 @@ h1,h2{margin:0;font-weight:650;letter-spacing:-.01em}
 /* Darilni boni imajo svojo (oranžno) barvo že na vstopni točki v meniju. */
 .menu-item-bon .menu-item-icon{color:var(--bon-accent)}
 .menu-divider{border:0;height:1px;margin:6px 4px;background:var(--line-soft)}
+/* Izbirnik teme v Nastavitvah (sistemska / svetla / temna) */
+.seg{display:flex;gap:4px;background:var(--bg-soft);border:1px solid var(--line);border-radius:var(--radius-sm);padding:4px}
+.seg-btn{
+  flex:1;padding:8px 6px;border:none;border-radius:8px;cursor:pointer;
+  font:inherit;font-size:.82rem;font-weight:600;background:none;color:var(--muted);
+}
+.seg-btn.active{background:var(--accent);color:var(--accent-ink)}
+@media (hover:hover){ .seg-btn:not(.active):hover{color:var(--text)} }
 .brand{display:flex;align-items:center;gap:11px;min-width:0}
 .brand h1{
   font-size:1.5rem;font-weight:750;letter-spacing:-.025em;
@@ -459,4 +467,32 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   padding:3px 7px;border-radius:999px;
   font-size:.63rem;font-weight:650;color:#fff;
   background:rgba(12,15,20,.72);border:1px solid var(--line);
+}
+
+/* ============ svetla tema ============
+   Privzeto (:root) je temna; data-theme="svetla" prepiše paleto in par
+   trdo zakodiranih temnih odtenkov. data-theme="temna" ne rabi nicesar
+   (ujema se s :root). Atribut na <html> postavi js/theme.js. */
+:root[data-theme="svetla"]{
+  --bg:#f4f6f9; --bg-soft:#ffffff;
+  --panel:#ffffff; --panel-2:#eceff4; --line:#d7dde6; --line-soft:#e7ebf1;
+  --text:#1b2330; --muted:#5c6675;
+  --accent:#16a34a; --accent-2:#15803d; --accent-ink:#ffffff;
+  --bon-accent:#ea7c1e; --bon-accent-2:#c96412; --bon-ink:#ffffff;
+  --danger:#dc2626; --danger-line:#efcccc;
+  --shadow:0 1px 2px rgba(0,0,0,.06), 0 12px 30px -18px rgba(15,23,42,.35);
+  --ring:0 0 0 3px rgba(22,163,74,.28);
+}
+:root[data-theme="svetla"] body{
+  background:
+    radial-gradient(1100px 520px at 50% -12%, #e7eef7 0%, transparent 62%),
+    var(--bg);
+}
+:root[data-theme="svetla"] .topbar{ background:rgba(255,255,255,.82); }
+:root[data-theme="svetla"] .garancija.kmalu,
+:root[data-theme="svetla"] .card-garancija.kmalu{ color:#b45309; }
+@media (hover:hover){
+  :root[data-theme="svetla"] .btn:hover,
+  :root[data-theme="svetla"] .btn-menu:hover{ background:#e9edf3; border-color:#c6cedb; }
+  :root[data-theme="svetla"] .card:hover{ border-color:#c6cedb; }
 }
