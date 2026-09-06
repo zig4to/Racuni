@@ -161,6 +161,30 @@ window.Sync = (function () {
       .catch(function () { storeSession(null); return null; });   // seja je potekla
   }
 
+  /* Prijava v ozadju iz huba (TomsStudios): povezava do te aplikacije lahko
+     nosi #sb_at=<access_token>&sb_rt=<refresh_token>. Ce sta prisotna, ju
+     zamenjamo za svezo sejo (odgovor /token vsebuje "user", zato normalise()
+     napolni user_id/email/name) in ju odstranimo iz naslovne vrstice.
+     Neuspeh je tih — aplikacija dela naprej kot odjavljena. */
+  function adoptFromUrl() {
+    var h = (typeof location !== 'undefined' && location.hash) || '';
+    if (h.indexOf('sb_at=') === -1 || h.indexOf('sb_rt=') === -1) {
+      return Promise.resolve();
+    }
+    var params = new URLSearchParams(h.replace(/^#/, ''));
+    var rt = params.get('sb_rt');
+    params.delete('sb_at');
+    params.delete('sb_rt');
+    var rest = params.toString();
+    try {
+      history.replaceState(null, '', location.pathname + location.search + (rest ? '#' + rest : ''));
+    } catch (e) { /* nic */ }
+    if (!rt || !configured()) return Promise.resolve();
+    return token('refresh_token', { refresh_token: rt })
+      .then(function (s) { storeSession(s); })
+      .catch(function () { /* neveljaven zeton -> ostane odjavljen */ });
+  }
+
   // ---------------------------------------------------------------- zahteve
   function headers(extra) {
     var h = { apikey: API_KEY, Authorization: 'Bearer ' + session.access_token };
@@ -620,6 +644,8 @@ window.Sync = (function () {
   }
 
   loadSession();
+  // Ce povezava iz huba nosi zeton, ga prevzamemo; sicer se razresi takoj.
+  var ready = adoptFromUrl();
 
   var Sync = {
     signIn: signIn,
@@ -631,6 +657,7 @@ window.Sync = (function () {
     afterDeleteBon: afterDeleteBon,
     session: function () { return session; },
     configured: configured,
+    ready: ready,
     onStatus: null
   };
   return Sync;

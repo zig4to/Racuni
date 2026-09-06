@@ -95,7 +95,11 @@
   });
 
   // Ob zagonu in ob vrnitvi povezave poskusimo uskladiti v ozadju.
-  render();
-  if (Sync.session()) Sync.syncNow();
+  // Sync.ready se razreši, ko je morebitni žeton iz huba (#sb_at/#sb_rt) že
+  // prevzet — šele nato izrišemo stanje prijave.
+  (Sync.ready || Promise.resolve()).then(function () {
+    render();
+    if (Sync.session()) Sync.syncNow();
+  });
   window.addEventListener('online', function () { Sync.syncNow(); });
 })();
