@@ -17,8 +17,23 @@
 <meta name="application-name" content="Računi">
 <link rel="stylesheet" href="style.css">
 <script src="js/theme.js"></script>
+<script>
+  /* Prijava iz huba (TomStudios): ce naslov nosi #sb_at&sb_rt, pokazi
+     nalagalnik, dokler se prijava ne izvede. Neodvisno od teme; tece
+     sinhrono, se pred izrisom telesa. */
+  try {
+    var _rh = (location.hash || '').replace(/^#/, '');
+    if (_rh.indexOf('sb_at=') > -1 && _rh.indexOf('sb_rt=') > -1) {
+      document.documentElement.classList.add('sso-pending');
+    }
+  } catch (e) {}
+</script>
 </head>
 <body>
+<div id="ssoLoader" role="status" aria-live="polite">
+  <span class="sso-spinner" aria-hidden="true"></span>
+  <p class="sso-loader-text">Prijavljanje v aplikacijo …</p>
+</div>
 
 <header class="topbar">
   <div class="brand">

@@ -496,3 +496,24 @@ main{padding:20px 18px 28px;max-width:1000px;margin:0 auto}
   :root[data-theme="svetla"] .btn-menu:hover{ background:#e9edf3; border-color:#c6cedb; }
   :root[data-theme="svetla"] .card:hover{ border-color:#c6cedb; }
 }
+
+/* ===== Nalagalnik ob prijavi iz huba (SSO) ===== */
+/* Privzeto skrit. Med izmenjavo SSO zetonov ga pokaze razred `sso-pending`
+   na <html>, ki ga postavi pre-paint skripta v index.html se pred izrisom;
+   adoptFromUrl() v js/sync.js ga odstrani, ko je prijava koncana. */
+#ssoLoader{display:none}
+html.sso-pending #ssoLoader{
+  position:fixed;inset:0;z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:16px;padding:24px;box-sizing:border-box;text-align:center;
+  background:var(--bg);
+}
+html.sso-pending body>*:not(#ssoLoader){visibility:hidden}
+.sso-spinner{
+  width:38px;height:38px;border-radius:50%;
+  border:3px solid var(--line);border-top-color:var(--accent);
+  animation:sso-spin .8s linear infinite;
+}
+.sso-loader-text{margin:0;font-size:.9rem;color:var(--muted)}
+@keyframes sso-spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){ .sso-spinner{animation-duration:1.6s} }

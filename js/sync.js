@@ -166,6 +166,12 @@ window.Sync = (function () {
      zamenjamo za svezo sejo (odgovor /token vsebuje "user", zato normalise()
      napolni user_id/email/name) in ju odstranimo iz naslovne vrstice.
      Neuspeh je tih — aplikacija dela naprej kot odjavljena. */
+  function stopSsoLoader() {
+    try {
+      document.documentElement.classList.remove('sso-pending');
+    } catch (e) { /* nic */ }
+  }
+
   function adoptFromUrl() {
     var h = (typeof location !== 'undefined' && location.hash) || '';
     if (h.indexOf('sb_at=') === -1 || h.indexOf('sb_rt=') === -1) {
@@ -179,10 +185,14 @@ window.Sync = (function () {
     try {
       history.replaceState(null, '', location.pathname + location.search + (rest ? '#' + rest : ''));
     } catch (e) { /* nic */ }
-    if (!rt || !configured()) return Promise.resolve();
+    if (!rt || !configured()) { stopSsoLoader(); return Promise.resolve(); }
+    /* Nalagalnik je ze viden (pre-paint skripta v <head>). Varovalo, ce se
+       izmenjava nikoli ne zakljuci (Supabase nedosegljiv). */
+    var safety = (typeof setTimeout !== 'undefined') ? setTimeout(stopSsoLoader, 10000) : null;
     return token('refresh_token', { refresh_token: rt })
       .then(function (s) { storeSession(s); })
-      .catch(function () { /* neveljaven zeton -> ostane odjavljen */ });
+      .catch(function () { /* neveljaven zeton -> ostane odjavljen */ })
+      .then(function () { if (safety) { clearTimeout(safety); } stopSsoLoader(); });
   }
 
   // ---------------------------------------------------------------- zahteve
