@@ -10,8 +10,8 @@ v galerijo na strani. Vse teče v brskalniku — fotografije ne gredo nikamor v 
 node serve.js          # ali: npm start
 ```
 
-V konzoli se izpišeta naslova. `http://localhost:8080` odpri na računalniku,
-naslov oblike `http://192.168.x.x:8080` pa **na telefonu** (isto WiFi omrežje) —
+V konzoli se izpišeta naslova. `http://localhost:8082` odpri na računalniku,
+naslov oblike `http://192.168.x.x:8082` pa **na telefonu** (isto WiFi omrežje) —
 tam deluje gumb »Slikaj račun«, ki odpre kamero.
 
 > Prek naslova IP se aplikacija ne da **namestiti** in ne deluje brez povezave:
@@ -98,9 +98,9 @@ To je edini pogoj, ki ga ni v tem repozitoriju:
 
 | Kje odpreš | Namestitev |
 |---|---|
-| `http://localhost:8080` (`npm start`) | ✅ deluje |
+| `http://localhost:8082` (`npm start`) | ✅ deluje |
 | `https://...` (npr. GitHub Pages) | ✅ deluje |
-| `http://192.168.x.x:8080` prek WiFi | ❌ ni varen izvor — glej spodaj |
+| `http://192.168.x.x:8082` prek WiFi | ❌ ni varen izvor — glej spodaj |
 | `file://index.html` | ❌ ne deluje (tudi shramba ne) |
 
 ### Na telefon
@@ -124,7 +124,7 @@ Odpri jo v Chromu na telefonu → meni ⋮ → *Namesti aplikacijo*.
 
 **2. Preizkus prek kabla USB** — brez objave, za razvoj: telefon priklopi z USB
 (vklopljeno *USB debugging*), na računalniku odpri `chrome://inspect/#devices` →
-*Port forwarding* → `8080` → `localhost:8080`. Na telefonu odpri `http://localhost:8080` —
+*Port forwarding* → `8082` → `localhost:8082`. Na telefonu odpri `http://localhost:8082` —
 to velja za varen izvor in namestitev deluje.
 
 Na iPhonu namestitve ne ponuja Chrome, ampak **Safari** → *Deli* → *Dodaj na začetni zaslon*.

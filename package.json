@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "description": "Slikaj račun, aplikacija izreže bel list in ga shrani kot JPG.",
   "private": true,
+  "config": {
+    "port": 8082
+  },
   "scripts": {
     "start": "node serve.js",
     "icons": "node tools/make-icons.js",

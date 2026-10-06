@@ -11,7 +11,7 @@ Everything runs client-side; no photo ever leaves the device. UI language is Slo
 ## Commands
 
 ```bash
-npm start              # node serve.js — static server on :8080, prints LAN IPs too
+npm start              # node serve.js — static server on :8082, prints LAN IPs too
 npm test               # all three suites in sequence (~68 checks, no deps)
 npm run test:detect    # node test/detect.node.test.js — corner detection only
 npm run test:app       # node test/app.node.test.js — full UI flow only

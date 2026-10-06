@@ -2,7 +2,8 @@
    Zagon: node serve.js  (privzeto vrata 8080) */
 var http = require('http'), fs = require('fs'), path = require('path'), os = require('os');
 
-var PORT = process.env.PORT || 8080;
+// Port: okoljska spremenljivka PORT ima prednost, sicer "config.port" iz package.json, sicer 8080.
+var PORT = process.env.PORT || process.env.npm_package_config_port || 8080;
 var ROOT = __dirname;
 var TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
