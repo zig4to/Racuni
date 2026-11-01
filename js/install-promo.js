@@ -111,7 +111,7 @@
     var ua = navigator.userAgent;
     if (isIOS()) return "V Safariju: Deli → Dodaj na začetni zaslon.";
     if (/Android/i.test(ua)) return "V Chromu: meni ⋮ → »Namesti aplikacijo« (če je ni, je aplikacija že nameščena).";
-    if (/Firefox//i.test(ua)) return "Firefox namestitve teh aplikacij ne podpira — odpri stran v Chromu ali Edge.";
+    if (/Firefox\//i.test(ua)) return "Firefox namestitve teh aplikacij ne podpira — odpri stran v Chromu ali Edge.";
     return "V Chromu ali Edge: ikona za namestitev v naslovni vrstici ali meni ⋮ → »Namesti aplikacijo«.";
   }
 
@@ -213,16 +213,13 @@
     return;
   }
   if (!window.InstallPromo) return;
-  var shown = false;
-  function show() {
-    if (shown) return;
-    shown = true;
-    window.InstallPromo._open({ explicit: true });
-  }
-  window.addEventListener("beforeinstallprompt", function () { setTimeout(show, 150); });
-  // Brez beforeinstallprompt (iOS, že nameščena, brskalnik brez podpore)
-  // po kratkem čakanju pokažemo navodila.
-  var ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-            (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
-  setTimeout(show, ios ? 600 : 2500);
+  // Okno takoj: brez ponudbe brskalnika pokaže navodila, ko ponudba pride
+  // (beforeinstallprompt), se odprto okno preklopi na gumb "Namesti".
+  window.InstallPromo._open({ explicit: true });
+  window.addEventListener("beforeinstallprompt", function () {
+    setTimeout(function () {
+      var ov = document.querySelector(".ip-overlay");
+      if (ov && !ov.hidden) window.InstallPromo._open({ explicit: true });
+    }, 50);
+  });
 })();
