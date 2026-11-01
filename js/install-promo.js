@@ -106,13 +106,23 @@
     return ov;
   }
 
+  // Ročna navodila, ko brskalnik ne ponudi samodejnega okna za namestitev.
+  function manualHint() {
+    var ua = navigator.userAgent;
+    if (isIOS()) return "V Safariju: Deli → Dodaj na začetni zaslon.";
+    if (/Android/i.test(ua)) return "V Chromu: meni ⋮ → »Namesti aplikacijo« (če je ni, je aplikacija že nameščena).";
+    if (/Firefox//i.test(ua)) return "Firefox namestitve teh aplikacij ne podpira — odpri stran v Chromu ali Edge.";
+    return "V Chromu ali Edge: ikona za namestitev v naslovni vrstici ali meni ⋮ → »Namesti aplikacijo«.";
+  }
+
   function openModal() {
     var ov = buildModal();
     iosVariant = !deferred && isIOS();
     var label = ov.querySelector(".ip-label");
     var cancel = ov.querySelector(".ip-cancel");
-    if (iosVariant) {
-      ov.querySelector(".ip-text").textContent = "V Safariju: Deli → Dodaj na začetni zaslon.";
+    if (!deferred) {
+      // iOS ali brez ponudbe brskalnika (npr. ob odprtju iz TomStudios) — navodila.
+      ov.querySelector(".ip-text").textContent = manualHint();
       label.textContent = "Razumem";
       cancel.hidden = true;
     } else {
@@ -170,4 +180,31 @@
   } else {
     run();
   }
+})();
+
+/* Gumb za namestitev na kartici v TomStudios odpre aplikacijo s ?namesti=1:
+   okno za namestitev pokažemo takoj, ne glede na števec prikazov. Brskalnik
+   lahko ponudi namestitev le za stran, ki je odprta, zato hub tega ne more
+   narediti sam. */
+(function () {
+  "use strict";
+  var url;
+  try { url = new URL(location.href); } catch (e) { return; }
+  if (url.searchParams.get("namesti") !== "1") return;
+  url.searchParams.delete("namesti");
+  try { history.replaceState(history.state, "", url.pathname + url.search + url.hash); } catch (e) { /* ni pomembno */ }
+  var standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  if (standalone || !window.InstallPromo) return;
+  var shown = false;
+  function show() {
+    if (shown) return;
+    shown = true;
+    window.InstallPromo._open({ explicit: true });
+  }
+  window.addEventListener("beforeinstallprompt", function () { setTimeout(show, 150); });
+  // Brez beforeinstallprompt (iOS, že nameščena, brskalnik brez podpore)
+  // po kratkem čakanju pokažemo navodila.
+  var ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+            (/Macintosh/.test(navigator.userAgent) && navigator.maxTouchPoints > 1);
+  setTimeout(show, ios ? 600 : 2500);
 })();
