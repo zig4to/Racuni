@@ -161,7 +161,7 @@ window.Sync = (function () {
       .catch(function () { storeSession(null); return null; });   // seja je potekla
   }
 
-  /* Prijava v ozadju iz huba (TomsStudios): povezava do te aplikacije lahko
+  /* Prijava v ozadju iz huba (Bitneverse): povezava do te aplikacije lahko
      nosi #sb_at=<access_token>&sb_rt=<refresh_token>. Ce sta prisotna, ju
      zamenjamo za svezo sejo (odgovor /token vsebuje "user", zato normalise()
      napolni user_id/email/name) in ju odstranimo iz naslovne vrstice.

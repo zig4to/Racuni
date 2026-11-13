@@ -121,7 +121,7 @@
     var label = ov.querySelector(".ip-label");
     var cancel = ov.querySelector(".ip-cancel");
     if (!deferred) {
-      // iOS ali brez ponudbe brskalnika (npr. ob odprtju iz TomStudios) — navodila.
+      // iOS ali brez ponudbe brskalnika (npr. ob odprtju iz Bitneverse) — navodila.
       ov.querySelector(".ip-text").textContent = manualHint();
       label.textContent = "Razumem";
       cancel.hidden = true;
@@ -182,7 +182,7 @@
   }
 })();
 
-/* Gumb za namestitev na kartici v TomStudios odpre aplikacijo s ?namesti=1:
+/* Gumb za namestitev na kartici v Bitneverse odpre aplikacijo s ?namesti=1:
    okno za namestitev pokažemo takoj, ne glede na števec prikazov. Brskalnik
    lahko ponudi namestitev le za stran, ki je odprta, zato hub tega ne more
    narediti sam. */
